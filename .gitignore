@@ -32,5 +32,9 @@
 *.app
 
 # added by Devin, for vscode
-build/
-.vscode
+# build/ 表示忽略当前目录及子目录
+# /window 表示仅忽略当前目录
+build/ 
+.vscode/
+/window
+/triangle_bak

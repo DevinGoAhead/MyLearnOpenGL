@@ -12,6 +12,10 @@
 
 #include <iostream>
 #include <cstdio>
+#include <ctime>
+#include <cmath>
+
+#include <windows.h>
 
 // 错误处理回调函数
 void error_callback(int error, const char *description)
@@ -31,6 +35,17 @@ void key_callback(GLFWwindow *pWindow, int key, int scancode, int action, int mo
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(pWindow, GL_TRUE);
+}
+
+
+//生成一个[0,1] 随机数
+float RandFrom0to1()
+{
+	Sleep(100);//这里为了让下一个随机数种子有时间产生一定的变化
+
+	srand(time(NULL) | GetCurrentProcessId());
+	double randNum = (int)glfwGetTime() | rand();
+	return ((sin(randNum) / 2) + 0.5); // sin() / 2  [-0.5, +0.5] 
 }
 
 int main()
@@ -94,7 +109,8 @@ int main()
 	while (!glfwWindowShouldClose(pWindow))
 	{
 		glfwPollEvents();//轮询 - glfw 与 窗口通信
-		glClearColor(0.3f, 0.5f, 0.7f, 1.0f);//设置清除颜色缓冲区后要使用的颜色
+		//glClearColor(0.3f, 0.5f, 0.7f, 1.0f);//设置清除颜色缓冲区后要使用的颜色-纯色
+		glClearColor(RandFrom0to1(), RandFrom0to1(), RandFrom0to1(), 1.0f);//设置清除颜色缓冲区后要使用的颜色-动态变化
 		glClear(GL_COLOR_BUFFER_BIT); // 清除颜色缓冲区
 		glfwSwapBuffers(pWindow);//交换前后缓冲区
 	}
