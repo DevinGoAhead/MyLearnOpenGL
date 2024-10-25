@@ -55,12 +55,13 @@ const char *vertexShaderCode = R"(
 	// vec3 为变量类型, position 为变量名称
 	// 在 glVertexAttribPointer 函数中配置该位置，将 location的ID 告知GPU, GPU 解析数据后将存到 posiotion 中
 	layout (location = 0) in vec3 position;
+	layout (location = 1) in vec4 inColor;
 	out vec4 fragColor;//out 表示输出, 该变量将输出至片段着色器
 
 	void main()
 	{
 		gl_Position = vec4(position, 1.0f);//齐次坐标, openGL内建变量, 表示点在裁剪空间的位置,本例给出NDC内坐标, 避免复杂转换
-		fragColor = vec4(0.7f, 0.5f, 0.3f, 0.4f); //颜色处理
+		fragColor = inColor; //颜色处理
 	}
 )";
 
@@ -224,21 +225,37 @@ int main()
 	//          | \/ |
 	//          6- 5-7
 	GLfloat vertices[] = {
-		0.0f, 0.3f, 0.0f,  // 0
-		-0.2f, 0.3f, 0.0f, // 1
-		-0.2f, 0.0f, 0.0f, // 2
+		// 0.0f, 0.3f, 0.0f,  // 0
+		// -0.2f, 0.3f, 0.0f, // 1
+		// -0.2f, 0.0f, 0.0f, // 2
+
+		// // 0.0f, 0.3f, 0.0f, // 0
+		// 0.2f, 0.3f, 0.0f, // 3
+		// 0.2f, 0.0f, 0.0f, // 4
+
+		// 0.0f, -0.3f, 0.0f,	// 5
+		// -0.2f, -0.3f, 0.0f, // 6
+		// //-0.2f, 0.0f,  0.0f, // 2
+
+		// // 0.0f, -0.3f, 0.0f, // 5
+		// 0.2f, -0.3f, 0.0f, // 7
+		// // 0.2f,  0.0f, 0.0f, // 4
+
+		0.0f, 0.3f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // 0
+		-0.2f, 0.3f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, // 1
+		-0.2f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, // 2
 
 		// 0.0f, 0.3f, 0.0f, // 0
-		0.2f, 0.3f, 0.0f, // 3
-		0.2f, 0.0f, 0.0f, // 4
+		0.2f, 0.3f, 0.0f, 1.0f, 0.6f, 0.1f, 0.8f, // 3
+		0.2f, 0.0f, 0.0f, 0.9f, 0.7f, 0.5f, 0.4f, // 4
 
-		0.0f, -0.3f, 0.0f,	// 5
-		-0.2f, -0.3f, 0.0f, // 6
+		0.0f, -0.3f, 0.0f, 0.7f, 0.5f, 0.3f, 0.3f, // 5
+		-0.2f, -0.3f, 0.0f, 0.5f, 0.3f, 0.1f, 0.7f, // 6
 		//-0.2f, 0.0f,  0.0f, // 2
 
 		// 0.0f, -0.3f, 0.0f, // 5
-		0.2f, -0.3f, 0.0f, // 7
-						   // 0.2f,  0.0f, 0.0f, // 4
+		0.2f, -0.3f, 0.0f, 1.0f, 1.0f, 1.0f, 0.5f // 7
+		// 0.2f,  0.0f, 0.0f, // 4
 	};
 
 	/*创建顶点索引数据*/
@@ -275,10 +292,17 @@ int main()
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 	// 告知 GPU 如何解析顶点数据
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(GLfloat), 0);
 	glEnableVertexAttribArray(0);
 
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(GLfloat), (const GLvoid *)(3*sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);
+
 	glBindVertexArray(0); // 将vertexArray 从 OpenGL 当前上下文解绑
+
+	//使 透明值 生效
+	glEnable(GL_BLEND);//启用颜色混合操作功能
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);//设置颜色混合模式
 
 	/*主循环*/
 	glfwSwapInterval(1); // 设置前后缓冲区交换间隔，单位为帧
