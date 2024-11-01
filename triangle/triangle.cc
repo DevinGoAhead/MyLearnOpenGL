@@ -10,6 +10,8 @@
 #include "glad\glad.h"
 #include "glfw\glfw3.h"
 
+#include "classShaderProgram\shaderProgram.hpp"
+
 #include <iostream>
 #include <cstdio>
 #include <ctime>
@@ -47,95 +49,11 @@ float RandFrom0to1()
 	return ((sin(randNum) / 2) + 0.5); // sin() / 2  [-0.5, +0.5]
 }
 
-// 顶点着色器源码
-const char *vertexShaderCode = R"(
-	#version 330 core
-	
-	// in 表示该数据需要从外部输入
-	// vec3 为变量类型, position 为变量名称
-	// 在 glVertexAttribPointer 函数中配置该位置，将 location的ID 告知GPU, GPU 解析数据后将存到 posiotion 中
-	layout (location = 0) in vec3 position;
-	void main()
-	{
-		gl_Position = vec4(position, 1.0f);//齐次坐标, openGL内建变量, 表示点在裁剪空间的位置,本例给出NDC内坐标, 避免复杂转换
-	}
-)";
-
-// 片段着色器源码
-const char *fragmentShaderCode = R"(
-	#version 330 core
-
-	uniform vec4 fragColor;//uniform 变量
-	out vec4 color;//输出变量,输出到下一个阶段
-
-	void main()
-	{
-		color =  fragColor;//颜色处理,简单示意
-	}
-)";
-
-// 编译着色器, 并获取编译日志
-void isCompileSuccess(GLuint shader)
-{
-	
-	GLint compileStatus = 0;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &compileStatus); // 获取着色器编译状态
-	// 如果编译失败,报错退出
-	if (!compileStatus)
-	{
-		std::cout << "ERROR::SHADER::COMPILE_FAILED\n"
-				  << std::endl;
-		//日志
-		GLchar log[1024];
-		glGetShaderInfoLog(shader, 1023, NULL, log); // 字符串存储编译日志
-
-		// 将日志存储到本地
-		time_t now;
-		time(&now);
-		struct tm *local = localtime(&now);
-		char fileName[64];
-		// sprintf(fileName, "compile_log_%s",ctime(&now));//文件格式为compile_log_ + 时间
-		strftime(fileName, sizeof(fileName), "compile_log_%Y-%m-%d.txt", local);
-
-		FILE *logFile = fopen(fileName, "a");
-		fprintf(logFile, "%s\n", log);
-		fclose(logFile);
-		exit(EXIT_FAILURE);
-	}
-}
-
-// 链接程序对象, 并获取链接日志
-void isLinkSuccess(GLuint shaderProgram)
-{
-	// 如果编译失败,报错,打印日志, 退出
-	GLint linkStatus = 0;
-	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &linkStatus); // 获取程序链接状态
-	if (!linkStatus)
-	{
-  		std::cout << "ERROR::SHADER::LINK_FAILED\n"
-				  << std::endl;
-		//日志
-		GLchar log[1024];
-		glGetProgramInfoLog(shaderProgram, 1023, NULL, log); // 字符串存储链接日志
-
-		// 将日志存储到本地
-		time_t now;
-		time(&now);
-		struct tm *local = localtime(&now);
-		char fileName[64];
-		// sprintf(fileName, "link_log_%s",ctime(&now));//文件格式为compile_log_ + 时间
-		strftime(fileName, sizeof(fileName), "link_log_%Y-%m-%d.txt", local);
-
-		FILE *logFile = fopen(fileName, "a");
-		fprintf(logFile, "%s\n", log);
-
-		fclose(logFile);
-		exit(EXIT_FAILURE);
-	}
-}
-
 int main()
 {
+	#ifdef DEBUG
+	std::cout << "Current path: " << std::filesystem::current_path() << std::endl;
+	#endif
 	glfwSetErrorCallback(error_callback); // 注册错误处理回调函数
 
 	if (!glfwInit()) // 初始化GLFW, 并判断是否初始化成功
@@ -186,31 +104,12 @@ int main()
 
 	// 注册视口尺寸自动调整回调函数
 	glfwSetFramebufferSizeCallback(pWindow, framebuffer_size_callback);
-
+	
 	// 注册键盘动作处理回调函数(可选)
 	glfwSetKeyCallback(pWindow, key_callback);
 
-	/*创建并编译着色器*/
-	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);		// 创建顶点着色器
-	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER); // 创建片段着色器
-
-	// 使用目标着色器源码覆盖着色器中旧的源码(因为现在着色器是新建的,所以这里也可以说是填充源码)
-	glShaderSource(vertexShader, 1, &vertexShaderCode, NULL);
-	glShaderSource(fragmentShader, 1, &fragmentShaderCode, NULL);
-
-	// 编译着色器并检测是否编译成功
-	glCompileShader(vertexShader);
-	isCompileSuccess(vertexShader);
-	
-	glCompileShader(fragmentShader);
-	isCompileSuccess(fragmentShader);
-
-	/*创建程序对象*/
-	GLuint shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram);			   // 链接
-	isLinkSuccess(shaderProgram);
+	//创建着色器程序
+	ShaderProgram myShaderProgram("../classShaderProgram/vertextShader.txt", "../classShaderProgram/fragmentShader.txt");
 
 	/*创建顶点数据*/
 	//          1- 0-3
@@ -288,9 +187,10 @@ int main()
 		glClearColor(0.3f, 0.5f, 0.7f, 1.0f);//设置清除颜色缓冲区后要使用的颜色-纯色
 		//glClearColor(RandFrom0to1(), RandFrom0to1(), RandFrom0to1(), 1.0f); // 设置清除颜色缓冲区后要使用的颜色-动态变化
 		glClear(GL_COLOR_BUFFER_BIT);										// 清除颜色缓冲区
-		GLint locationFragColor = glGetUniformLocation(shaderProgram, "fragColor");//获取 uniform 变量 fragColor 的ID
-		glUniform4f(locationFragColor, RandFrom0to1(), RandFrom0to1(), RandFrom0to1(), 0.7f);
-		glUseProgram(shaderProgram);	// 激活着色程序
+		
+		//设定 uniform 变量 fragColor 的值
+		myShaderProgram.SetUniform("fragColor", RandFrom0to1(), RandFrom0to1(), RandFrom0to1(), RandFrom0to1());
+		myShaderProgram.Use();	// 激活着色程序
 		glBindVertexArray(vertexArray); // 第二次绑定同一个 VAO 时，OpenGL 会使用这个 VAO 中记录的所有配置信息来进行绘制操作
 		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, (void *)0);
 
