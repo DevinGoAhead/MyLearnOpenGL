@@ -1,0 +1,9 @@
+#version 330 core
+
+uniform vec4 fragColor;//uniform 变量
+out vec4 color;//输出变量,输出到下一个阶段
+
+void main()
+{
+	color =  fragColor;//颜色处理,简单示意
+}
