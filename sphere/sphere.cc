@@ -123,57 +123,82 @@ int main()
 	// 创建着色器程序
 	ShaderProgram myShaderProgram("../classShaderProgram/vertextShader.txt", "../classShaderProgram/fragmentShader.txt");
 
-	/*创建顶点数据*/
-	std::vector<Vertex> vertices;
+
+	/*这里为了避免两次遍历,将顶点数据的创建 和 顶点index 的创建放到了一个循环中*/
+	
 	
 	// 将球划分出 LatitudeBands 个纬度(其实得到了 LatitudeBands + 1 条纬度线)
 	// 将球划分出 LongitudeBands 个经度(其实得到了 LongitudeBands + 1 条纬度线,且第一条和最后一条是重合的)
 	// 顶点总数其实是 (LatitudeBands +1) * (LongitudeBands + 1)个
-	const int LatitudeBands = 20;  
-	const int LongitudeBands = 40; 
+	const int LatitudeBands = 40;  
+	const int LongitudeBands = 80; 
 	
 	const GLfloat radius = 1.0f;	   // 球体半径
+	
+	std::vector<Vertex> vertices;
 	Vertex pVertex;				   // 球上一点 P
+	std::vector<Triangle> indices;
+	Triangle triangle; //由几点扩展出的三角形
 
 	// 每 ++ 一次, 纬度线递增一次, 自上之下遍历
 	for (int latNum = 0; latNum <= LatitudeBands; ++latNum) 
 	{
-		GLfloat phi = ((GLfloat)latNum / (GLfloat)LatitudeBands) * std::numbers::pi;// OP 与 y 轴的夹角, 范围为 [0, π]
+		// OP 与 y 轴的夹角, 范围为 [0, π]
+		GLfloat phi = (static_cast<GLfloat>(latNum) / static_cast<GLfloat>(LatitudeBands)) * std::numbers::pi;
 
 		for (int longiNum = 0; longiNum <= LongitudeBands; ++longiNum) // 每 ++ 一次, 经度线递增一次, 顺时针遍历
 		{
-			GLfloat theta = ((GLfloat)longiNum / (GLfloat)LongitudeBands) * 2 * std::numbers::pi;// OP 在 xOz 面投影线 ON 与 x 轴的夹角,范围为 [0, 2π]
+			/* 创建顶点数据 */
+			// OP 在 xOz 面投影线 ON 与 x 轴的夹角,范围为 [0, 2π]
+			GLfloat theta = (static_cast<GLfloat>(longiNum) / static_cast<GLfloat>(LongitudeBands)) * 2 * std::numbers::pi;
 			GLfloat lenON = radius * sin(phi); // ON 的长度
 
 			pVertex.x = lenON * cos(theta);
 			pVertex.y = radius * cos(phi);
 			pVertex.z = lenON * sin(theta);
 			vertices.push_back(pVertex);
+
+			/* 创建顶点索引数据
+	 		 * 每个基准点扩充出 2 个三角形, 忽略最后一行, 最后一列(行列是指如果能将球展开的情况下)
+	 		 */
+			if(latNum < LatitudeBands && longiNum < LongitudeBands)
+			{
+				//第一个三角形, 逆时针定义
+				triangle.aPtNum = latNum * (LongitudeBands + 1) + longiNum;
+				triangle.bPtNum = (latNum + 1) * (LongitudeBands + 1) + longiNum;
+				triangle.cPtNum = (latNum + 1) * (LongitudeBands + 1) + (longiNum + 1);
+				indices.push_back(triangle);
+
+				//第二个三角形与第一个三角形共线 ac, 因此仅计算另一个点即可
+				triangle.bPtNum = triangle.aPtNum + 1;
+				std::swap(triangle.bPtNum, triangle.cPtNum);//确保逆时针定义三角形
+				indices.push_back(triangle);
+			}
 		}
 	}
 
 
-	/* 创建顶点索引数据
-	 * 每个基准点扩充出 2 个三角形, 忽略最后一行, 最后一列(行列是指如果能将球展开的情况下)
-	 */
-	std::vector<Triangle> indices;
-	Triangle triangle;
-	for (GLuint latNum = 0; latNum < LatitudeBands; ++latNum) 
-	{
-		for (GLuint longiNum = 0; longiNum < LongitudeBands; ++longiNum) // 每 ++ 一次, 经度线递增一次, 顺时针遍历
-		{
-			//第一个三角形, 逆时针定义
-			triangle.aPtNum = latNum * (LongitudeBands + 1) + longiNum;
-			triangle.bPtNum = (latNum + 1) * (LongitudeBands + 1) + longiNum;
-			triangle.cPtNum = (latNum + 1) * (LongitudeBands + 1) + (longiNum + 1);
-			indices.push_back(triangle);
+	// /* 创建顶点索引数据
+	//  * 每个基准点扩充出 2 个三角形, 忽略最后一行, 最后一列(行列是指如果能将球展开的情况下)
+	//  */
+	// std::vector<Triangle> indices;
+	// Triangle triangle;
+	// for (GLuint latNum = 0; latNum < LatitudeBands; ++latNum) 
+	// {
+	// 	for (GLuint longiNum = 0; longiNum < LongitudeBands; ++longiNum) // 每 ++ 一次, 经度线递增一次, 顺时针遍历
+	// 	{
+	// 		//第一个三角形, 逆时针定义
+	// 		triangle.aPtNum = latNum * (LongitudeBands + 1) + longiNum;
+	// 		triangle.bPtNum = (latNum + 1) * (LongitudeBands + 1) + longiNum;
+	// 		triangle.cPtNum = (latNum + 1) * (LongitudeBands + 1) + (longiNum + 1);
+	// 		indices.push_back(triangle);
 
-			//第二个三角形与第一个三角形共线 ac, 因此仅计算另一个点即可
-			triangle.bPtNum = triangle.aPtNum + 1;
-			std::swap(triangle.bPtNum, triangle.cPtNum);//确保逆时针定义三角形
-			indices.push_back(triangle);
-		}
-	}
+	// 		//第二个三角形与第一个三角形共线 ac, 因此仅计算另一个点即可
+	// 		triangle.bPtNum = triangle.aPtNum + 1;
+	// 		std::swap(triangle.bPtNum, triangle.cPtNum);//确保逆时针定义三角形
+	// 		indices.push_back(triangle);
+	// 	}
+	// }
 
 	/*创建缓冲对象*/
 	GLuint vertexBuffer, elementBuffer; // 分别用于存储顶点缓冲对象, 元素(索引)缓冲对象
@@ -204,7 +229,7 @@ int main()
 	// 告知 GPU 如何解析顶点数据
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
 	glEnableVertexAttribArray(0);
-
+	//std::cout << (void*)offsetof(Vertex, x) <<std::endl;
 	glBindVertexArray(0); // 将vertexArray 从 OpenGL 当前上下文解绑
 
 	// 使 透明值 生效
@@ -221,7 +246,7 @@ int main()
 	{
 		glfwPollEvents();					  // 轮询 - glfw 与 窗口通信
 		glClearColor(0.3f, 0.5f, 0.7f, 1.0f); // 设置清除颜色缓冲区后要使用的颜色-纯色
-		// glClearColor(RandFrom0to1(), RandFrom0to1(), RandFrom0to1(), 1.0f); // 设置清除颜色缓冲区后要使用的颜色-动态变化
+		//glClearColor(RandFrom0to1(), RandFrom0to1(), RandFrom0to1(), 1.0f); // 设置清除颜色缓冲区后要使用的颜色-动态变化
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // 清除颜色缓冲区 和 深度缓冲区
 
 		// 设定 uniform 变量 fragColor 的值
