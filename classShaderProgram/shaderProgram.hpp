@@ -104,9 +104,9 @@ void ShaderProgram::SetUniform(const std::string& uniformName, T value, Args... 
 
 void ShaderProgram::FileToString(const std::string& FilePath, std::string& strDestination)
 {
-	#ifdef DEBUG
-	std::cout << "Current path: " << fs::current_path() << std::endl;
-	#endif
+	// #ifdef DEBUG
+	// std::cout << "Current path: " << fs::current_path() << std::endl;
+	// #endif
 	std::ifstream iFileStrm;
 	iFileStrm.exceptions(std::ios_base::failbit | std::ios_base::badbit);//设置抛出异常的类型
 	try
