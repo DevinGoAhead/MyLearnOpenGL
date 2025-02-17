@@ -120,8 +120,9 @@ int main()
 	glGenBuffers(1, &elementBuffer);	// 创建一个缓冲对象,(将其ID)存储在 elementBuffer 中
 
 	// 创建纹理对象
-	GLuint texture;
-	glGenTextures(1, &texture); // 创建一个纹理对象, 将其 ID 存储在 texture 中
+	GLuint texture0, texture1;
+	glGenTextures(1, &texture0); // 创建一个纹理对象, 将其 ID 存储在 texture0 中
+	glGenTextures(1, &texture1); // 创建一个纹理对象, 将其 ID 存储在 texture1 中
 	
 	/*顶点属性配置*/
 	// 创建VAO, 以记录配置的属性
@@ -140,33 +141,71 @@ int main()
 	// 将 elementBuffer 绑定在 GL_ELEMENT_ARRAY_BUFFER 上,后续对 GL_ELEMENT_ARRAY_BUFFER 的操作, 会影响 vertexBuffer
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
 	
-	// 将纹理图像绑定在 GL_TEXTURE_2D 上, 后续对 GL_TEXTURE_2D 的操作, 会影响 texture
-	glBindTexture(GL_TEXTURE_2D, texture);
-
 	// 设置纹理参数
-	// 分别设置 ST 方向的环绕方式
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	
-	// 设置纹理映射缩放算法
-	// 当纹理被放大, 线性插值, 避免像素化
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
-	// 当纹理被缩小, 使用 MipMap 算法, 且采用三线性插值的算法
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); 
+	auto TexParameteri = [](){
+		// 设置纹理参数
+		// 分别设置 ST 方向的环绕方式
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	// 加载纹理对象
-	int texWidth, texHeight, nRChannels;
-	unsigned char* pImageData = stbi_load("./container.jpg", &texWidth, &texHeight, &nRChannels, 0);
-	if(!pImageData) 
-	{
-		std::cerr << "failed to load Image" << '\n';
-		exit(1);
-	}
-	
-	// 生成纹理
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, pImageData);
-	glGenerateMipmap(GL_TEXTURE_2D);// 自动生成多级渐远纹理
-	stbi_image_free(pImageData);// 释放图片资源
+		// 设置纹理映射缩放算法
+		// 当纹理被放大, 线性插值, 避免像素化
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
+		// 当纹理被缩小, 使用 MipMap 算法, 且采用三线性插值的算法
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); 
+	};
+
+	// 加载并生成纹理图像
+	auto GenerateTexImg = [](const char* pathName, GLint internalFormat){
+		// 加载图像
+		stbi_set_flip_vertically_on_load(true); // 加载图像时反转 y 轴
+		int texWidth, texHeight, nRChannels;
+		unsigned char* pImageData = stbi_load(pathName, &texWidth, &texHeight, &nRChannels, 0);
+		if(!pImageData) 
+		{
+			std::cerr << "failed to load Image" << '\n';
+			exit(1);
+		}
+		// 生成纹理
+		// 生成纹理图像
+		GLenum format;
+		switch (nRChannels)
+		{
+			case 3:
+			{
+				format = GL_RGB;
+				break;
+			}
+			case 4:
+			{
+				format = GL_RGBA;
+				break;
+			}
+			default:
+			{}
+		}
+		// 生成的纹理图像将保存在 glGenTextures 所生成的对象中
+		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, texWidth, texHeight, 0, format, GL_UNSIGNED_BYTE, pImageData);
+		glGenerateMipmap(GL_TEXTURE_2D);// 自动生成多级渐远纹理
+		stbi_image_free(pImageData);// 释放图片资源
+	};
+
+	// 处理texture0
+	// 将纹理图像绑定在 GL_TEXTURE_2D 上, 后续对 GL_TEXTURE_2D 的操作, 会影响 texture
+	glActiveTexture(GL_TEXTURE0); // 激活纹理单元0, 并绑定 texture0
+	glBindTexture(GL_TEXTURE_2D, texture0);
+	TexParameteri(); // 设置纹理参数
+
+	// 加载并生成纹理对象
+	GenerateTexImg("./container.jpg", GL_RGB);
+
+	// 处理texture1
+	glActiveTexture(GL_TEXTURE1); // 激活纹理单元1, 并绑定 texture1
+	glBindTexture(GL_TEXTURE_2D, texture1);
+	TexParameteri(); // 设置纹理参数
+
+	// 加载并生成纹理对象
+	GenerateTexImg("./awesomeface.png", GL_RGBA);
 
 	// 在 GPU 中开辟指定类型的缓冲区, 用于存放 vertices indeies
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -186,6 +225,10 @@ int main()
 	glEnable(GL_BLEND);//启用颜色混合操作功能
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);//设置颜色混合模式
 
+	myShaderProgram.Use();	// 激活着色程序
+	myShaderProgram.SetUniform("texturer0", 0);// 将纹理单元0 传递给texturer0
+	myShaderProgram.SetUniform("texturer1", 1);// 将纹理单元1 传递给texturer1
+
 	/*主循环*/
 	glfwSwapInterval(1); // 设置前后缓冲区交换间隔，单位为帧
 	while (!glfwWindowShouldClose(pWindow))
@@ -196,7 +239,7 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT);										// 清除颜色缓冲区
 		//glBindTexture(GL_TEXTURE_2D, texture);
 		//myShaderProgram.SetUniform("fragColor", RandFrom0to1(), RandFrom0to1(), RandFrom0to1(), RandFrom0to1());
-		myShaderProgram.Use();	// 激活着色程序
+		
 		glBindVertexArray(vertexArray); // 第二次绑定同一个 VAO 时，OpenGL 会使用这个 VAO 中记录的所有配置信息来进行绘制操作
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void *)0);
 
