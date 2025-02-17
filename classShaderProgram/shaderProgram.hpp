@@ -39,10 +39,10 @@ ShaderProgram::ShaderProgram(const std::string& vertexShaderFilePath, const std:
 	FileToString(vertexShaderFilePath,  vertexShaderCode);
 	FileToString(fragmentShaderFilePath, fragmentShaderCode);
 	
-	#ifdef DEBUG
-	std::cout << "vertexShaderCode: " << vertexShaderCode<<std::endl;
-	std::cout << "fragmentShaderCode: " <<fragmentShaderCode<<std::endl;
-	#endif
+	// #ifdef DEBUG
+	// std::cout << "vertexShaderCode: " << vertexShaderCode<<std::endl;
+	// std::cout << "fragmentShaderCode: " <<fragmentShaderCode<<std::endl;
+	// #endif
 
 	/*创建并编译着色器*/
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);		// 创建顶点着色器
