@@ -1,7 +1,12 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h" // 加载纹理图像
+
 #include "glad\glad.h"
 #include "glfw\glfw3.h"
+
+#include "glm\glm.hpp"
+#include "glm\gtc\matrix_transform.hpp"
+#include "glm\gtc\type_ptr.hpp"
 
 #include "classShaderProgram\shaderProgram.hpp"
 
@@ -9,6 +14,7 @@
 #include <cstdio>
 #include <ctime>
 #include <cmath>
+
 
 
 #include <windows.h>
@@ -240,6 +246,14 @@ int main()
 		//glBindTexture(GL_TEXTURE_2D, texture);
 		//myShaderProgram.SetUniform("fragColor", RandFrom0to1(), RandFrom0to1(), RandFrom0to1(), RandFrom0to1());
 		
+		// 变换矩阵
+		glm::mat4 transform = glm::mat4(1.0f); // 初始矩阵, 1 个 4 * 4 的单位矩阵
+		float time = (float)glfwGetTime();
+		float dx =  std::fmod(time, 2.f) - 1;
+		// 先生成平移转换矩阵, 再生成旋转矩阵, 但实际是先旋转后平移 trans * rotate * vert
+		transform = glm::rotate(glm::translate(transform, glm::vec3(dx, 0.f, 0.f)), time, glm::vec3(0.f, 0.f, 1.f));
+		glUniformMatrix4fv(glGetUniformLocation(myShaderProgram.ID(), "transform_"), 1, GL_FALSE, glm::value_ptr(transform));	
+
 		glBindVertexArray(vertexArray); // 第二次绑定同一个 VAO 时，OpenGL 会使用这个 VAO 中记录的所有配置信息来进行绘制操作
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void *)0);
 
