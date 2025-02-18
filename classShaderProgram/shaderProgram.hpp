@@ -22,9 +22,11 @@ public:
 	ShaderProgram(const std::string& vertexShaderFilePath, const std::string& fragShaderFilePath);
 	void Use();//激活 shader program
 	
-	//设定 uniform 变量的值(可变参数模板)
+	// 设定 uniform 变量的值(可变参数模板)
+	// 后面发现很难穷举针对所有类型的函数, 舍弃了该方法
 	template<typename T, typename... Args>
 	void SetUniform(const std::string& uniformName, T value, Args... args);
+	GLuint ID() {return _shaderProgram;}
 private:
 	void FileToString(const std::string& FilePath, std::string& strDestination);// 将文件内容 "拷贝" 至字符串
 	void isCompileSuccess(GLuint shader);//检测着色器编译是否成功, 并获取链接日志
