@@ -15,6 +15,10 @@
 #include <ctime>
 #include <cmath>
 
+//eye
+glm::vec3 eyePos(0.f, 0.f, -4.f);
+glm::vec3 eyeFront(0.f, 0.f, -1.f); // 这里指的是 eye 看向的正方向, 即 eyePos - pixelCoord并单位化, 而不是实际看向物体的方向
+glm::vec3 eyeUp(0.f, 1.f, 0.f);
 
 
 #include <windows.h>
@@ -35,8 +39,40 @@ void framebuffer_size_callback(GLFWwindow *pWindow, int width, int height)
 // 这里仅配置了Esc按键
 void key_callback(GLFWwindow *pWindow, int key, int scancode, int action, int mods)
 {
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-		glfwSetWindowShouldClose(pWindow, GL_TRUE);
+	float speed = 0.05;
+	switch (key)
+	{
+		case GLFW_KEY_ESCAPE:
+		{
+			if(action == GLFW_PRESS)
+				glfwSetWindowShouldClose(pWindow, GL_TRUE);
+			break;
+		}
+		case GLFW_KEY_W : // 前
+		{
+			eyePos += (speed * eyeFront);
+			break;
+		}
+		case GLFW_KEY_S : // 后
+		{
+			eyePos -= (speed * eyeFront);
+			break;
+		}
+		case GLFW_KEY_A : // 左
+		{
+			eyePos -= speed * glm::normalize(glm::cross(eyeFront, eyeUp));
+			break;
+		}
+		case GLFW_KEY_D : // 右
+		{
+			eyePos += speed * glm::normalize(glm::cross(eyeFront, eyeUp));
+			break;
+		}
+		default:
+		{
+
+		}
+	}
 }
 
 // 生成一个[0,1] 随机数
@@ -289,8 +325,6 @@ int main()
 		glm::vec3( 1.5f,  0.2f, -1.5f), 
 		glm::vec3(-1.3f,  1.0f, -1.5f)  
 	  };
-
-	glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0.f, 0.f, -2)); // 视图变换(假设相机在0,0,2)
 	glm::mat4 project = glm::perspective(glm::radians(45.f), (float)wndWidth /  (float)wndHeight, 0.5f, 100.f);
 
 	/*主循环*/
@@ -303,7 +337,9 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);// 清除颜色缓冲区 和 深度缓冲区
 		
 		glBindVertexArray(vertexArray); // 第二次绑定同一个 VAO 时，OpenGL 会使用这个 VAO 中记录的所有配置信息来进行绘制操作
-
+		double time = (double)glfwGetTime();
+		// 摄像机位置沿一个xOz 平面的, bangjin圆运动, 看向 0 点, 向上的方向与 y 轴同向
+		glm::mat4 view = glm::lookAt(glm::vec3(glm::sin(time) * 10.f, 0.f, glm::cos(time)* 10.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
 		myShaderProgram.Use();	// 激活着色程序
 		glUniformMatrix4fv(glGetUniformLocation(myShaderProgram.ID(), "view_"), 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(glGetUniformLocation(myShaderProgram.ID(), "project_"), 1, GL_FALSE, glm::value_ptr(project));
