@@ -105,12 +105,55 @@ int main()
 	//          |     |
 	//          3- - -1
 
+	// GLfloat vertices[] = {
+	// 	//顶点坐标				顶点颜色		顶点对应的纹理坐标
+	// 	0.5f, 0.5f, 0.0f,    1.f, 1.f, 0.f,     1.f,1.f, // 0, 右上角
+	// 	0.5f, -0.5f, 0.0f,    1.f, 0.f, 1.f,     1.f,0.f, // 1, 右下角
+	// 	-0.5f, 0.5f, 0.0f,    0.f, 1.f, 1.f,     0.f,1.f, // 2, 左上角
+	// 	-0.5f, -0.5f, 0.0f,    1.f, 1.f, 1.f,     0.f,0.f // 3, 左下角
+	// };
 	GLfloat vertices[] = {
-		//顶点坐标				顶点颜色		顶点对应的纹理坐标
-		0.5f, 0.5f, 0.0f,    1.f, 1.f, 0.f,     1.f,1.f, // 0, 右上角
-		0.5f, -0.5f, 0.0f,    1.f, 0.f, 1.f,     1.f,0.f, // 1, 右下角
-		-0.5f, 0.5f, 0.0f,    0.f, 1.f, 1.f,     0.f,1.f, // 2, 左上角
-		-0.5f, -0.5f, 0.0f,    1.f, 1.f, 1.f,     0.f,0.f // 3, 左下角
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+		0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	   -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+	   -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+	   -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+	   -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+	   -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+	   -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	   -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	   -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	   -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	   -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	   -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+	   -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+	   -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	   -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+	   -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	   -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+	   -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
 	};
 
 	/*创建顶点索引数据*/
@@ -218,11 +261,11 @@ int main()
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 	// 告知 GPU 如何解析顶点数据
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), 0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (void*)(6 * sizeof(GLfloat)));
+	// 这一版去掉了纹顶点颜色
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), 0);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
 	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
+	//glEnableVertexAttribArray(1);
 	glEnableVertexAttribArray(2);
 
 	glBindVertexArray(0); // 将vertexArray 从 OpenGL 当前上下文解绑
@@ -230,10 +273,25 @@ int main()
 	//使 透明值 生效
 	glEnable(GL_BLEND);//启用颜色混合操作功能
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);//设置颜色混合模式
+	
+	glEnable(GL_DEPTH_TEST);// 启用深度测试
+	
+	// 让箱子分别平移到 10 个不同的位置
+	glm::vec3 cubePositions[] = {
+		glm::vec3( 0.0f,  0.0f,  0.0f), 
+		glm::vec3( 2.0f,  5.0f, -15.0f), 
+		glm::vec3(-1.5f, -2.2f, -2.5f),  
+		glm::vec3(-3.8f, -2.0f, -12.3f),  
+		glm::vec3( 2.4f, -0.4f, -3.5f),  
+		glm::vec3(-1.7f,  3.0f, -7.5f),  
+		glm::vec3( 1.3f, -2.0f, -2.5f),  
+		glm::vec3( 1.5f,  2.0f, -2.5f), 
+		glm::vec3( 1.5f,  0.2f, -1.5f), 
+		glm::vec3(-1.3f,  1.0f, -1.5f)  
+	  };
 
-	myShaderProgram.Use();	// 激活着色程序
-	myShaderProgram.SetUniform("texturer0", 0);// 将纹理单元0 传递给texturer0
-	myShaderProgram.SetUniform("texturer1", 1);// 将纹理单元1 传递给texturer1
+	glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0.f, 0.f, -2)); // 视图变换(假设相机在0,0,2)
+	glm::mat4 project = glm::perspective(glm::radians(45.f), (float)wndWidth /  (float)wndHeight, 0.5f, 100.f);
 
 	/*主循环*/
 	glfwSwapInterval(1); // 设置前后缓冲区交换间隔，单位为帧
@@ -241,22 +299,30 @@ int main()
 	{
 		glfwPollEvents(); // 轮询 - glfw 与 窗口通信
 		glClearColor(0.3f, 0.5f, 0.7f, 1.0f);//设置清除颜色缓冲区后要使用的颜色-纯色
-		//glClearColor(RandFrom0to1(), RandFrom0to1(), RandFrom0to1(), 1.0f); // 设置清除颜色缓冲区后要使用的颜色-动态变化
-		glClear(GL_COLOR_BUFFER_BIT);										// 清除颜色缓冲区
-		//glBindTexture(GL_TEXTURE_2D, texture);
-		//myShaderProgram.SetUniform("fragColor", RandFrom0to1(), RandFrom0to1(), RandFrom0to1(), RandFrom0to1());
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);// 清除颜色缓冲区 和 深度缓冲区
 		
-		// 变换矩阵
-		glm::mat4 transform = glm::mat4(1.0f); // 初始矩阵, 1 个 4 * 4 的单位矩阵
-		float time = (float)glfwGetTime();
-		float dx =  std::fmod(time, 2.f) - 1;
-		// 先生成平移转换矩阵, 再生成旋转矩阵, 但实际是先旋转后平移 trans * rotate * vert
-		transform = glm::rotate(glm::translate(transform, glm::vec3(dx, 0.f, 0.f)), time, glm::vec3(0.f, 0.f, 1.f));
-		glUniformMatrix4fv(glGetUniformLocation(myShaderProgram.ID(), "transform_"), 1, GL_FALSE, glm::value_ptr(transform));	
-
 		glBindVertexArray(vertexArray); // 第二次绑定同一个 VAO 时，OpenGL 会使用这个 VAO 中记录的所有配置信息来进行绘制操作
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void *)0);
 
+		myShaderProgram.Use();	// 激活着色程序
+		glUniformMatrix4fv(glGetUniformLocation(myShaderProgram.ID(), "view_"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(glGetUniformLocation(myShaderProgram.ID(), "project_"), 1, GL_FALSE, glm::value_ptr(project));
+		myShaderProgram.SetUniform("texturer0", 0);// 将纹理单元0 传递给texturer0
+		myShaderProgram.SetUniform("texturer1", 1);// 将纹理单元1 传递给texturer1
+		
+		for(int i = 0; i < 10; ++i)
+		{
+			// 模型变换矩阵
+			// 实际是先沿 x 轴 再沿 y 轴旋转
+			
+			glm::mat4 model = glm::translate(glm::mat4(1.0f), cubePositions[i]);
+			model = glm::translate(model, glm::vec3(0.f, 0.f, -2.f));
+			model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.f, 1.f, 0.f)); // 沿 y 轴随时间旋转
+			model = glm::rotate(model, (float)glm::radians(-50.f), glm::vec3(1.f, 0.f, 0.f)); // 沿 x 轴旋转-50°
+			glUniformMatrix4fv(glGetUniformLocation(myShaderProgram.ID(), "model_"), 1, GL_FALSE, glm::value_ptr(model));
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
+		
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区
 	}
 	// 清理资源

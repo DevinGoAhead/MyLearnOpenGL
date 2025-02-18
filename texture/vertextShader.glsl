@@ -10,11 +10,13 @@ layout (location = 2) in vec2 verTexCoords;
 out vec3 transVerColor;
 out vec2 transVerTexCoords;
 
-uniform mat4 transform_;
+uniform mat4 model_;
+uniform mat4 view_;
+uniform mat4 project_;
 
 void main()
 {
-	gl_Position = transform_ * vec4(verPosition, 1.0f);//齐次坐标, openGL内建变量, 表示点在裁剪空间的位置,本例给出NDC内坐标, 避免复杂转换
+	gl_Position = project_ * view_ * model_ * vec4(verPosition, 1.0f);//齐次坐标, openGL内建变量, 表示点在裁剪空间的位置,本例给出NDC内坐标, 避免复杂转换
 	transVerColor = verColor;
 	//transVerTexCoords = vec2(verTexCoords.x, verTexCoords.y);
 	transVerTexCoords = verTexCoords;
