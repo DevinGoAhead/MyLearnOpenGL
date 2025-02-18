@@ -15,13 +15,23 @@
 #include <ctime>
 #include <cmath>
 
+#include <windows.h>
+
+// window
+int wndWidth, wndHeight;
+
 //eye
-glm::vec3 eyePos(0.f, 0.f, -4.f);
+glm::vec3 eyePos(0.f, 0.f, -2.f);
 glm::vec3 eyeFront(0.f, 0.f, -1.f); // 这里指的是 eye 看向的正方向, 即 eyePos - pixelCoord并单位化, 而不是实际看向物体的方向
 glm::vec3 eyeUp(0.f, 1.f, 0.f);
+double pitch = 0.f, yaw = -90.f; // pitch 与 y 轴夹角, yaw 与 x 轴夹角
+float fov = 45.f;
 
+// time
+float curTime = 0.f, lastTime = 0.f, perFrameTime = 0.f;
 
-#include <windows.h>
+//cursor
+double xLast = wndWidth / 2, yLast = wndHeight / 2; // 初始值为视口中心
 
 // 错误处理回调函数
 void error_callback(int error, const char *description)
@@ -39,7 +49,7 @@ void framebuffer_size_callback(GLFWwindow *pWindow, int width, int height)
 // 这里仅配置了Esc按键
 void key_callback(GLFWwindow *pWindow, int key, int scancode, int action, int mods)
 {
-	float speed = 0.05;
+	float speed = 8 * perFrameTime;
 	switch (key)
 	{
 		case GLFW_KEY_ESCAPE:
@@ -73,6 +83,41 @@ void key_callback(GLFWwindow *pWindow, int key, int scancode, int action, int mo
 
 		}
 	}
+}
+
+bool first = true;
+void cursor_callback(GLFWwindow* window, double xPos, double yPos)
+{
+	// 计算偏移值
+	// 当我们想向上时, 理应 yPos - yLast > 0, 但屏幕 y 坐标向下为正, 导致 yPos - yLast < 0, 故取反
+	double dx = xPos - xLast, dy = yLast - yPos;
+	if(first) {dx = 0, dy =0, first = false;}
+
+	xLast = xPos, yLast = yPos;
+	double sensitivity = 0.05f; // 这个值自己调整
+	dx *= sensitivity, dy *= sensitivity;
+
+	pitch += dy, yaw += dx;// 添加到俯仰角中
+
+	// 限制角度不要转到异常角度
+	if(pitch > 89.f) pitch = 89.f;
+	if(pitch < -89.f) pitch = -89.f;
+	
+	// 计算新的eyeFront
+	eyeFront.y = glm::sin(glm::radians(pitch));
+	double rXZ = glm::cos(glm::radians(pitch));
+	eyeFront.x = rXZ * glm::cos(glm::radians(yaw));
+	eyeFront.z = rXZ * glm::sin(glm::radians(yaw));
+	eyeFront = glm::normalize(eyeFront);
+}
+
+// 多数鼠标无法在 x 方向滚动, 故暂忽略 xoffset
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	// 通常滚轮向下是一个放大的操作, 而滚轮向下会导致一个 > 0 的 yoffset, 此时我们想
+	fov += yoffset;
+	if(fov > 50.f) fov = 50.f;
+	if(fov < 0.1f) fov = 0.1f;
 }
 
 // 生成一个[0,1] 随机数
@@ -121,33 +166,21 @@ int main()
 	// 获取缓冲区的尺寸(物理像素)
 	// 默认的帧缓冲区是屏幕帧缓冲区
 	// 获取的区域并非整个屏幕，而是窗口的内容区域，不包括标题栏和边框
-	int wndWidth, wndHeight;
 	glfwGetFramebufferSize(pWindow, &wndWidth, &wndHeight);
-
-	// 设定视口尺寸
-	glViewport(0, 0, wndWidth, wndHeight);
-
-	// 注册视口尺寸自动调整回调函数
-	glfwSetFramebufferSizeCallback(pWindow, framebuffer_size_callback);
 	
-	// 注册键盘动作处理回调函数(可选)
-	glfwSetKeyCallback(pWindow, key_callback);
+	glViewport(0, 0, wndWidth, wndHeight);// 设定视口尺寸
+	glfwSetInputMode(pWindow, GLFW_CURSOR, GLFW_CURSOR_HIDDEN); // 隐藏光标
+
+	glfwSetFramebufferSizeCallback(pWindow, framebuffer_size_callback);// 注册视口尺寸自动调整回调函数
+	
+	glfwSetKeyCallback(pWindow, key_callback);// 注册键盘动作处理回调函数(可选)
+	glfwSetCursorPosCallback(pWindow, cursor_callback);// 注册光标捕捉函数
+	glfwSetScrollCallback(pWindow, scroll_callback);// 注册滚轮捕捉函数
 
 	//创建着色器程序
 	ShaderProgram myShaderProgram("./vertextShader.glsl", "./fragmentShader.glsl");
 
 	/*创建顶点数据*/
-	//          2- - -0
-	//          |     |
-	//          3- - -1
-
-	// GLfloat vertices[] = {
-	// 	//顶点坐标				顶点颜色		顶点对应的纹理坐标
-	// 	0.5f, 0.5f, 0.0f,    1.f, 1.f, 0.f,     1.f,1.f, // 0, 右上角
-	// 	0.5f, -0.5f, 0.0f,    1.f, 0.f, 1.f,     1.f,0.f, // 1, 右下角
-	// 	-0.5f, 0.5f, 0.0f,    0.f, 1.f, 1.f,     0.f,1.f, // 2, 左上角
-	// 	-0.5f, -0.5f, 0.0f,    1.f, 1.f, 1.f,     0.f,0.f // 3, 左下角
-	// };
 	GLfloat vertices[] = {
 		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
 		0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
@@ -325,8 +358,6 @@ int main()
 		glm::vec3( 1.5f,  0.2f, -1.5f), 
 		glm::vec3(-1.3f,  1.0f, -1.5f)  
 	  };
-	glm::mat4 project = glm::perspective(glm::radians(45.f), (float)wndWidth /  (float)wndHeight, 0.5f, 100.f);
-
 	/*主循环*/
 	glfwSwapInterval(1); // 设置前后缓冲区交换间隔，单位为帧
 	while (!glfwWindowShouldClose(pWindow))
@@ -337,9 +368,12 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);// 清除颜色缓冲区 和 深度缓冲区
 		
 		glBindVertexArray(vertexArray); // 第二次绑定同一个 VAO 时，OpenGL 会使用这个 VAO 中记录的所有配置信息来进行绘制操作
-		double time = (double)glfwGetTime();
-		// 摄像机位置沿一个xOz 平面的, bangjin圆运动, 看向 0 点, 向上的方向与 y 轴同向
-		glm::mat4 view = glm::lookAt(glm::vec3(glm::sin(time) * 10.f, 0.f, glm::cos(time)* 10.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
+		curTime = glfwGetTime();
+		perFrameTime = curTime - lastTime;
+		lastTime = curTime;
+		// eyeFront = eyePos - pixelPos, 则 pixelPos = eyePos + eyeFront
+		glm::mat4 view = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
+		glm::mat4 project = glm::perspective(glm::radians(fov), (float)wndWidth /  (float)wndHeight, 0.5f, 100.f);
 		myShaderProgram.Use();	// 激活着色程序
 		glUniformMatrix4fv(glGetUniformLocation(myShaderProgram.ID(), "view_"), 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(glGetUniformLocation(myShaderProgram.ID(), "project_"), 1, GL_FALSE, glm::value_ptr(project));
@@ -352,8 +386,8 @@ int main()
 			// 实际是先沿 x 轴 再沿 y 轴旋转
 			
 			glm::mat4 model = glm::translate(glm::mat4(1.0f), cubePositions[i]);
-			model = glm::translate(model, glm::vec3(0.f, 0.f, -2.f));
-			model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.f, 1.f, 0.f)); // 沿 y 轴随时间旋转
+			model = glm::translate(model, glm::vec3(0.f, 0.f, -1.f));
+			//model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.f, 1.f, 0.f)); // 沿 y 轴随时间旋转
 			model = glm::rotate(model, (float)glm::radians(-50.f), glm::vec3(1.f, 0.f, 0.f)); // 沿 x 轴旋转-50°
 			glUniformMatrix4fv(glGetUniformLocation(myShaderProgram.ID(), "model_"), 1, GL_FALSE, glm::value_ptr(model));
 			glDrawArrays(GL_TRIANGLES, 0, 36);
