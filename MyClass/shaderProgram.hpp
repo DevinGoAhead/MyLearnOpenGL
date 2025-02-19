@@ -108,6 +108,7 @@ void ShaderProgram::FileToString(const std::string& FilePath, std::string& strDe
 {
 	// #ifdef DEBUG
 	// std::cout << "Current path: " << fs::current_path() << std::endl;
+	// std::cout << "FilePath: " << FilePath << std::endl;
 	// #endif
 	std::ifstream iFileStrm;
 	iFileStrm.exceptions(std::ios_base::failbit | std::ios_base::badbit);//设置抛出异常的类型
