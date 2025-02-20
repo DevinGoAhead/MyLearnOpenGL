@@ -32,6 +32,10 @@ int main()
 	GLuint VBO;
 	glGenBuffers(1, &VBO); // 创建 vertexBuffer, 绑定到 ID VBO 上
 
+	//材质
+	GLuint texture0;
+	glGenTextures(1, &texture0); // 将纹理对象绑定到的 ID 绑定到texture0
+
 	// boxVAO
 	GLuint boxVAO;
 	glGenVertexArrays(1, &boxVAO); // 创建 vertexArray, 绑定到 ID boxVAO 上
@@ -41,12 +45,46 @@ int main()
 	// 在 GPU 中开辟指定类型的缓冲区, 用于存放 vertices indeies
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	
+	// 纹理参数设置
+	auto TexParameteri = [](){
+		// 2D 纹理, ST 坐标, 超出边界重复
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+
+		// 纹理映射缩放算法
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);//纹理若被放大, 则线性插值
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);//纹理若被缩小, 则三线性插值
+	};
+
+	// 加载并生成纹理图像
+	auto GenerateTexImg = [](const char* pathName){
+		int texWidth, texHeight, nRChannels;
+		unsigned char* pImageData = stbi_load(pathName, &texWidth, &texHeight, &nRChannels, 0);
+		if(!pImageData) 
+		{
+			std::cerr << "failed to load Image" << '\n';
+			exit(1);
+		}
+		// 本例均为GL_RGBA
+		// 生成的纹理图像将保存在 glGenTextures 所生成的对象中
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pImageData);
+		glGenerateMipmap(GL_TEXTURE_2D);// 自动生成多级渐远纹理
+		stbi_image_free(pImageData);// 释放图片资源
+	};
+
+	// 激活纹理单元0, 并绑定 texture0
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture0);
+	TexParameteri(); // 设置纹理参数
+	GenerateTexImg("./model/container.png");// 加载并生成纹理对象
+
 	// 顶点着色器 location index, 属性元素分量, 类型, 是否标准化, 步距, 相对起点偏移
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), 0); // 顶点坐标
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat))); // 法线坐标(向量)
-
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (void*)(6 * sizeof(GLfloat))); // 纹理
 	glEnableVertexAttribArray(0); // 启用location 0
 	glEnableVertexAttribArray(1); // 启用location 1
+	glEnableVertexAttribArray(2); // 启用location 1
 
 	glBindVertexArray(0); // 将 boxVAO 从 OpenGL 当前上下文解绑
 
@@ -81,8 +119,7 @@ int main()
 		curTime = glfwGetTime();
 		perFrameTime = curTime - lastTime;
 		lastTime = curTime;
-
-		glm::vec3 lightPos{3.f * glm::sin(curTime), 1.f, 3.f * glm::cos(curTime)}; //沿半径为 的圆周运动
+		glm::vec3 lightPos{ 1.0f + sin(curTime) * 2.0f, sin(curTime / 2.0f) * 1.0f, 2.f}; //沿半径为 的圆周运动
 		// 视图变换和投影变换矩阵
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 project = glm::perspective(glm::radians(camera.GetFov()), (float)wndWidth / (float)wndHeight, 0.1f, 100.f); 
@@ -101,17 +138,19 @@ int main()
 		//light
 		float c_ = glm::sin(curTime);
 		//lightColor.x = 0.9f * c_, lightColor.y = 0.8f * glm::cos(curTime), lightColor.z = 0.2 * c_;
-		lightColor.x = 2.f * c_, lightColor.y = 0.7f * c_, lightColor.z = 1.3f * c_;
+		//lightColor.x = 2.f * c_, lightColor.y = 0.7f * c_, lightColor.z = 1.3f * c_;
 		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.ambientColor"), 1, glm::value_ptr(glm::vec3(0.1f) * lightColor));
 		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.diffuseColor"), 1, glm::value_ptr(glm::vec3(0.5f) * lightColor));
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.specularColor"), 1, glm::value_ptr(glm::vec3(1.f)));
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.specularColor"), 1, glm::value_ptr(glm::vec3(0.8f)));
 		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.pos"), 1, glm::value_ptr(lightPos));
 		
 		//material
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "material_.ambient"), 1, glm::value_ptr(glm::vec3(1.0f, 0.5f, 0.3f)));
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "material_.diffuse"), 1, glm::value_ptr(glm::vec3(1.0f, 0.5f, 0.3f)));
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "material_.specular"), 1, glm::value_ptr(glm::vec3(1.f)));
-		boxShaderProgram.SetUniform("material_.shiness",30);
+		//glActiveTexture(GL_TEXTURE0);
+		//glBindTexture(GL_TEXTURE_2D, texture0);
+
+		boxShaderProgram.SetUniform("material_.diffuseTexer",0);
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "material_.specular"), 1, glm::value_ptr(glm::vec3(0.5f)));
+		boxShaderProgram.SetUniform("material_.shiness",64);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		// draw light

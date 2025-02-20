@@ -26,5 +26,5 @@ void main()
 	_normal_ = normalize(_normal_); // 单位化
 	//_vertex_ = vec3(model_ * (vertex_v, 1.f)); // 错误的写法
 	_vertex_ = vec3(model_ * vec4(vertex_v, 1.f));
-	//_verTexCoords_ = verTexCoords_v;
+	_verTexCoords_ = verTexCoords_v;
 }
