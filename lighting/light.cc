@@ -144,14 +144,20 @@ int main()
 		//lightColor.x = 0.9f * c_, lightColor.y = 0.8f * glm::cos(curTime), lightColor.z = 0.2 * c_;
 		//lightColor.x = 2.f * c_, lightColor.y = 0.7f * c_, lightColor.z = 1.3f * c_;
 		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.ambientColor"), 1, glm::value_ptr(glm::vec3(0.2f) * lightColor));
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.diffuseColor"), 1, glm::value_ptr(glm::vec3(0.5f) * lightColor));
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.specularColor"), 1, glm::value_ptr(glm::vec3(0.9f)* lightColor));
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.pos"), 1, glm::value_ptr(lightPos));
-
-		// 这里配置的是一个能够覆盖60m 的点光
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.diffuseColor"), 1, glm::value_ptr(glm::vec3(0.8f) * lightColor));
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.specularColor"), 1, glm::value_ptr(glm::vec3(1.f)* lightColor));
+		// 这里想象一个人拿着手电筒, eye 和 light 的坐标相同
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.pos"), 1, glm::value_ptr(camera.GetPos()));
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.direc"), 1, glm::value_ptr(glm::normalize(camera.GetFront())));
+		
+		// 聚光
+		// 但仍要考虑衰减
 		boxShaderProgram.SetUniform("light_.constant", 1.f); // "光强" 衰减常数项
 		boxShaderProgram.SetUniform("light_.linear", 0.07f); // "光强" 衰减一次项(线性衰减)
 		boxShaderProgram.SetUniform("light_.quadratic", 0.017f); // "光强" 衰减二次项
+		// 直接传递余弦值, 避免在 GPU 中计算
+		boxShaderProgram.SetUniform("light_.phi", glm::cos(glm::radians(12.5f))); // 内切光角的余弦
+		boxShaderProgram.SetUniform("light_.gamma", glm::cos(glm::radians(17.5f))); // 外切光角的余弦
 
 		//material
 		boxShaderProgram.SetUniform("material_.diffuseTexer",0);
