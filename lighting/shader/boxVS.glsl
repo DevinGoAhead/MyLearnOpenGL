@@ -24,6 +24,7 @@ void main()
 	// 强转为 3 * 3 矩阵再于 normal_v 相乘
 	_normal_ =  mat3(transpose(inverse(model_))) * normal_v;
 	_normal_ = normalize(_normal_); // 单位化
-	_vertex_ = vec3(model_ * (vertex_v, 1.f));
-	_verTexCoords_ = verTexCoords_v;
+	//_vertex_ = vec3(model_ * (vertex_v, 1.f)); // 错误的写法
+	_vertex_ = vec3(model_ * vec4(vertex_v, 1.f));
+	//_verTexCoords_ = verTexCoords_v;
 }
