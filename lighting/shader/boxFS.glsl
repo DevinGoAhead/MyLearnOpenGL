@@ -3,7 +3,7 @@
 struct Material
 {
 	sampler2D diffuseTexer;
-	vec3 specular;
+	sampler2D specularTexer;
 	float shiness;
 };
 
@@ -34,10 +34,13 @@ void main()
 
 	vec3 point2eye = normalize(cameraPos_ - _vertex_); //点指向观察位置, 单位化
 	vec3 bisector = normalize(point2eye + point2light); //半程向量
-	vec3 specularItem =  material_.specular * light_.specularColor /** max(dot(point2light, _normal_), 0.f)*/
+	
+	vec3 specularItem = vec3(texture(material_.specularTexer, _verTexCoords_ )) * light_.specularColor /** max(dot(point2light, _normal_), 0.f)*/
 			* pow(max(dot(bisector, _normal_), 0.f),  material_.shiness); 
 
-	//vec3 result = (ambientItem + diffuseItem + specularItem);
+	// vec3 reflectPt2 = reflect(-point2light, _normal_);
+	// vec3 specularItem = vec3(texture(material_.specularTexer, _verTexCoords_ )) * light_.specularColor /** max(dot(point2light, _normal_), 0.f)*/
+	// 		* pow(max(dot(reflectPt2, point2eye), 0.f),  material_.shiness); 
 	vec3 result = (ambientItem + diffuseItem + specularItem);
 	_fragColor_ = vec4(result, 1.f);
 }

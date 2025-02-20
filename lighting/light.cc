@@ -32,9 +32,12 @@ int main()
 	GLuint VBO;
 	glGenBuffers(1, &VBO); // 创建 vertexBuffer, 绑定到 ID VBO 上
 
-	//材质
+	//纹理
 	GLuint texture0;
 	glGenTextures(1, &texture0); // 将纹理对象绑定到的 ID 绑定到texture0
+
+	GLuint texture1;
+	glGenTextures(1, &texture1); // 将纹理对象绑定到的 ID 绑定到texture1
 
 	// boxVAO
 	GLuint boxVAO;
@@ -77,6 +80,11 @@ int main()
 	glBindTexture(GL_TEXTURE_2D, texture0);
 	TexParameteri(); // 设置纹理参数
 	GenerateTexImg("./model/container.png");// 加载并生成纹理对象
+	// 激活纹理单元1, 并绑定 texture1
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, texture1);
+	TexParameteri(); // 设置纹理参数
+	GenerateTexImg("./model/container2_specular.png");// 加载并生成纹理对象
 
 	// 顶点着色器 location index, 属性元素分量, 类型, 是否标准化, 步距, 相对起点偏移
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), 0); // 顶点坐标
@@ -109,6 +117,8 @@ int main()
 	ShaderProgram boxShaderProgram("./shader/boxVS.glsl", "./shader/boxFS.glsl");
 	ShaderProgram lightShaderProgram("./shader/lightVS.glsl", "./shader/lightFS.glsl");
 	glm::vec3 lightColor{1.f, 1.f, 1.f};
+	glm::vec3 lightPos{1.2f, 1.0f, 2.0f};
+
 	// 主循环
 	glfwSwapInterval(1); // 前后缓冲区交换间隔
 	while(!glfwWindowShouldClose(pWindow))
@@ -119,7 +129,9 @@ int main()
 		curTime = glfwGetTime();
 		perFrameTime = curTime - lastTime;
 		lastTime = curTime;
-		glm::vec3 lightPos{ 1.0f + sin(curTime) * 2.0f, sin(curTime / 2.0f) * 1.0f, 2.f}; //沿半径为 的圆周运动
+		// //沿半径为 的圆周运动
+		 lightPos.x = 1.0f + sin(curTime) * 2.0f;
+         lightPos.y = sin(curTime / 2.0f) * 1.0f;
 		// 视图变换和投影变换矩阵
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 project = glm::perspective(glm::radians(camera.GetFov()), (float)wndWidth / (float)wndHeight, 0.1f, 100.f); 
@@ -136,12 +148,12 @@ int main()
 		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "cameraPos_"), 1, glm::value_ptr(camera.GetPos()));
 		
 		//light
-		float c_ = glm::sin(curTime);
+		//float c_ = glm::sin(curTime);
 		//lightColor.x = 0.9f * c_, lightColor.y = 0.8f * glm::cos(curTime), lightColor.z = 0.2 * c_;
 		//lightColor.x = 2.f * c_, lightColor.y = 0.7f * c_, lightColor.z = 1.3f * c_;
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.ambientColor"), 1, glm::value_ptr(glm::vec3(0.1f) * lightColor));
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.ambientColor"), 1, glm::value_ptr(glm::vec3(0.2f) * lightColor));
 		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.diffuseColor"), 1, glm::value_ptr(glm::vec3(0.5f) * lightColor));
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.specularColor"), 1, glm::value_ptr(glm::vec3(0.8f)));
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.specularColor"), 1, glm::value_ptr(glm::vec3(0.9f)* lightColor));
 		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.pos"), 1, glm::value_ptr(lightPos));
 		
 		//material
@@ -149,7 +161,7 @@ int main()
 		//glBindTexture(GL_TEXTURE_2D, texture0);
 
 		boxShaderProgram.SetUniform("material_.diffuseTexer",0);
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "material_.specular"), 1, glm::value_ptr(glm::vec3(0.5f)));
+		boxShaderProgram.SetUniform("material_.specularTexer",1);
 		boxShaderProgram.SetUniform("material_.shiness",64);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
