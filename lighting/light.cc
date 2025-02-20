@@ -147,9 +147,12 @@ int main()
 		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.diffuseColor"), 1, glm::value_ptr(glm::vec3(0.5f) * lightColor));
 		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.specularColor"), 1, glm::value_ptr(glm::vec3(0.9f)* lightColor));
 		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.pos"), 1, glm::value_ptr(lightPos));
-		// 平行光, 光源指向物体的光
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.direction"), 1, glm::value_ptr(glm::vec3(-0.2f, -1.f, -0.3f)));
-		
+
+		// 这里配置的是一个能够覆盖60m 的点光
+		boxShaderProgram.SetUniform("light_.constant", 1.f); // "光强" 衰减常数项
+		boxShaderProgram.SetUniform("light_.linear", 0.07f); // "光强" 衰减一次项(线性衰减)
+		boxShaderProgram.SetUniform("light_.quadratic", 0.017f); // "光强" 衰减二次项
+
 		//material
 		boxShaderProgram.SetUniform("material_.diffuseTexer",0);
 		boxShaderProgram.SetUniform("material_.specularTexer",1);
@@ -158,6 +161,8 @@ int main()
 		glUniformMatrix4fv(glGetUniformLocation(boxShaderProgram.ID(), "view_"), 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(glGetUniformLocation(boxShaderProgram.ID(), "project_"), 1, GL_FALSE, glm::value_ptr(project));
 		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "cameraPos_"), 1, glm::value_ptr(camera.GetPos()));
+
+		//draw 10 boxes
 		for(int i = 0; i < 10; ++i)
 		{
 			glm::mat4 boxModel = glm::translate(glm::mat4(1.f), cubePositions[i]); // 平移到不同的位置
