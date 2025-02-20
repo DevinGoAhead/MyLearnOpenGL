@@ -36,7 +36,7 @@ void main()
 	vec3 normal = normalize(_normal_);
 	float distance = length(light_.pos - _vertex_);
 	float attenuation = 1.f / ( light_.constant + light_.linear * distance +  light_.quadratic *  distance * distance);
-	attenuation = 1.f;
+	//attenuation = 1.f;
 	
 	vec3 point2light = normalize(light_.pos - _vertex_); //点指向光源, 单位化
 	float theta = dot(-point2light, light_.direc); // dot(light2point, spotDirec)
