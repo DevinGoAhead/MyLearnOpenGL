@@ -130,23 +130,15 @@ int main()
 		perFrameTime = curTime - lastTime;
 		lastTime = curTime;
 		// //沿半径为 的圆周运动
-		 lightPos.x = 1.0f + sin(curTime) * 2.0f;
-         lightPos.y = sin(curTime / 2.0f) * 1.0f;
+		//  lightPos.x = 1.0f + sin(curTime) * 2.0f;
+        //  lightPos.y = sin(curTime / 2.0f) * 1.0f;
 		// 视图变换和投影变换矩阵
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 project = glm::perspective(glm::radians(camera.GetFov()), (float)wndWidth / (float)wndHeight, 0.1f, 100.f); 
 		//draw box
 		boxShaderProgram.Use();
 		glBindVertexArray(boxVAO);
-		glm::mat4 boxModel = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, -0.f)); // 3 向 -z 方向移动一下, 确保观察大小合适
-		//boxModel = glm::rotate(boxModel, 10 * glm::radians(curTime), glm::vec3(0.f, 1.f, 0.f)); // 2. 随时间沿 y 轴旋转
-		//boxModel = glm::rotate(boxModel, glm::radians(20.f), glm::vec3(1.f, 0.f, 0.f)); //1. 沿 x 轴旋转一个小的角度, 可以看到顶面
-		glUniformMatrix4fv(glGetUniformLocation(boxShaderProgram.ID(), "model_"), 1, GL_FALSE, glm::value_ptr(boxModel));
-		glUniformMatrix4fv(glGetUniformLocation(boxShaderProgram.ID(), "view_"), 1, GL_FALSE, glm::value_ptr(view));
-		glUniformMatrix4fv(glGetUniformLocation(boxShaderProgram.ID(), "project_"), 1, GL_FALSE, glm::value_ptr(project));
-		//glm::vec3 x = camera.GetPos();
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "cameraPos_"), 1, glm::value_ptr(camera.GetPos()));
-		
+
 		//light
 		//float c_ = glm::sin(curTime);
 		//lightColor.x = 0.9f * c_, lightColor.y = 0.8f * glm::cos(curTime), lightColor.z = 0.2 * c_;
@@ -155,29 +147,39 @@ int main()
 		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.diffuseColor"), 1, glm::value_ptr(glm::vec3(0.5f) * lightColor));
 		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.specularColor"), 1, glm::value_ptr(glm::vec3(0.9f)* lightColor));
 		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.pos"), 1, glm::value_ptr(lightPos));
+		// 平行光, 光源指向物体的光
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.direction"), 1, glm::value_ptr(glm::vec3(-0.2f, -1.f, -0.3f)));
 		
 		//material
-		//glActiveTexture(GL_TEXTURE0);
-		//glBindTexture(GL_TEXTURE_2D, texture0);
-
 		boxShaderProgram.SetUniform("material_.diffuseTexer",0);
 		boxShaderProgram.SetUniform("material_.specularTexer",1);
 		boxShaderProgram.SetUniform("material_.shiness",64);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
 
-		// draw light
-		lightShaderProgram.Use();
-		glBindVertexArray(lightVAO);
+		glUniformMatrix4fv(glGetUniformLocation(boxShaderProgram.ID(), "view_"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(glGetUniformLocation(boxShaderProgram.ID(), "project_"), 1, GL_FALSE, glm::value_ptr(project));
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "cameraPos_"), 1, glm::value_ptr(camera.GetPos()));
+		for(int i = 0; i < 10; ++i)
+		{
+			glm::mat4 boxModel = glm::translate(glm::mat4(1.f), cubePositions[i]); // 平移到不同的位置
+			float angle = i * 20.f;
+			boxModel = glm::rotate(boxModel, glm::radians(angle), glm::vec3(0.3f, 0.5f, 0.7f));
+			glUniformMatrix4fv(glGetUniformLocation(boxShaderProgram.ID(), "model_"), 1, GL_FALSE, glm::value_ptr(boxModel));
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
+
+		// draw ligh
+		// lightShaderProgram.Use();
+		// glBindVertexArray(lightVAO);
 		
-		glm::mat4 lightModel = glm::translate(glm::mat4(1.f), lightPos);// 3. 沿半径为 的圆周运动
-		lightModel = glm::translate(lightModel, glm::vec3(0.f, 0.f, -0.f)); // 2. 移动到和box 在同一个深度上
-		lightModel = glm::scale(lightModel, glm::vec3(0.2f, 0.2f, 0.2f));// 1. 适当缩放, 使其能观察到, 不至于太大
-		glUniformMatrix4fv(glGetUniformLocation(lightShaderProgram.ID(), "model_"), 1, GL_FALSE, glm::value_ptr(lightModel));
-		glUniformMatrix4fv(glGetUniformLocation(lightShaderProgram.ID(), "view_"), 1, GL_FALSE, glm::value_ptr(view));
-		glUniformMatrix4fv(glGetUniformLocation(lightShaderProgram.ID(), "project_"), 1, GL_FALSE, glm::value_ptr(project));
-		glUniform3fv(glGetUniformLocation(lightShaderProgram.ID(), "lightColor_"), 1, glm::value_ptr(lightColor));
-		glUniform3fv(glGetUniformLocation(lightShaderProgram.ID(), "cameraPos_"), 1, glm::value_ptr(camera.GetPos()));
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+		// glm::mat4 lightModel = glm::translate(glm::mat4(1.f), lightPos);// 3. 沿半径为 的圆周运动
+		// lightModel = glm::translate(lightModel, glm::vec3(0.f, 0.f, -0.f)); // 2. 移动到和box 在同一个深度上
+		// lightModel = glm::scale(lightModel, glm::vec3(0.2f, 0.2f, 0.2f));// 1. 适当缩放, 使其能观察到, 不至于太大
+		// glUniformMatrix4fv(glGetUniformLocation(lightShaderProgram.ID(), "model_"), 1, GL_FALSE, glm::value_ptr(lightModel));
+		// glUniformMatrix4fv(glGetUniformLocation(lightShaderProgram.ID(), "view_"), 1, GL_FALSE, glm::value_ptr(view));
+		// glUniformMatrix4fv(glGetUniformLocation(lightShaderProgram.ID(), "project_"), 1, GL_FALSE, glm::value_ptr(project));
+		// glUniform3fv(glGetUniformLocation(lightShaderProgram.ID(), "lightColor_"), 1, glm::value_ptr(lightColor));
+		// glUniform3fv(glGetUniformLocation(lightShaderProgram.ID(), "cameraPos_"), 1, glm::value_ptr(camera.GetPos()));
+		// glDrawArrays(GL_TRIANGLES, 0, 36);
 		
 		// 渲染
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区

@@ -9,10 +9,12 @@ struct Material
 
 struct Light
 {
+	
 	vec3 ambientColor;
 	vec3 diffuseColor;
 	vec3 specularColor;
-	vec3 pos;
+	//vec3 pos;
+	vec3 direction; // 平行光
 };
 
 uniform vec3 cameraPos_;
@@ -28,7 +30,8 @@ void main()
 {
 	vec3 ambientItem = vec3(texture(material_.diffuseTexer, _verTexCoords_ )) * light_.ambientColor; // 环境光使用和漫反射相同的材质颜色
 	
-	vec3 point2light = normalize(light_.pos - _vertex_); //点指向光源, 单位化
+	//vec3 point2light = normalize(light_.pos - _vertex_); //点指向光源, 单位化
+	vec3 point2light = normalize(-light_.direction); //平行光, 光源方向与物体(的点)无光, 不需要与点做运算, 直接用光本身的方向
 	//_normal_ = normalize(_normal_); // 单位化, varing 变量, 即从外面传递过来的变量, 不能修改, 所以智能在顶点着色器中单位化
 	vec3 diffuseItem = vec3(texture(material_.diffuseTexer, _verTexCoords_ )) * light_.diffuseColor * max(dot(point2light, _normal_), 0.f);
 
