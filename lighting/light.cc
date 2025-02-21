@@ -117,7 +117,14 @@ int main()
 	ShaderProgram boxShaderProgram("./shader/boxVS.glsl", "./shader/boxFS.glsl");
 	ShaderProgram lightShaderProgram("./shader/lightVS.glsl", "./shader/lightFS.glsl");
 	glm::vec3 lightColor{1.f, 1.f, 1.f};
-	glm::vec3 lightPos{1.2f, 1.0f, 2.0f};
+	
+	// 点光源位置
+	glm::vec3 pointLightPositions[] = {
+		glm::vec3( 0.7f, 0.2f, 2.0f),
+		glm::vec3( 2.3f, -3.3f, -4.0f),
+		glm::vec3(-4.0f, 2.0f, -12.0f),
+		glm::vec3( 0.0f, 0.0f, -3.0f)
+	   };
 
 	// 主循环
 	glfwSwapInterval(1); // 前后缓冲区交换间隔
@@ -143,22 +150,38 @@ int main()
 		//float c_ = glm::sin(curTime);
 		//lightColor.x = 0.9f * c_, lightColor.y = 0.8f * glm::cos(curTime), lightColor.z = 0.2 * c_;
 		//lightColor.x = 2.f * c_, lightColor.y = 0.7f * c_, lightColor.z = 1.3f * c_;
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.ambientColor"), 1, glm::value_ptr(glm::vec3(0.2f) * lightColor));
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.diffuseColor"), 1, glm::value_ptr(glm::vec3(0.8f) * lightColor));
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.specularColor"), 1, glm::value_ptr(glm::vec3(1.f)* lightColor));
-		// 这里想象一个人拿着手电筒, eye 和 light 的坐标相同
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.pos"), 1, glm::value_ptr(camera.GetPos()));
-		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "light_.direc"), 1, glm::value_ptr(glm::normalize(camera.GetFront())));
-		
 		// 聚光
-		// 但仍要考虑衰减
-		boxShaderProgram.SetUniform("light_.constant", 1.f); // "光强" 衰减常数项
-		boxShaderProgram.SetUniform("light_.linear", 0.07f); // "光强" 衰减一次项(线性衰减)
-		boxShaderProgram.SetUniform("light_.quadratic", 0.017f); // "光强" 衰减二次项
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "spotLight_.ambientColor"), 1, glm::value_ptr(glm::vec3(0.2f) * lightColor));
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "spotLight_.diffuseColor"), 1, glm::value_ptr(glm::vec3(0.8f) * lightColor));
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "spotLight_.specularColor"), 1, glm::value_ptr(glm::vec3(1.f)* lightColor));
+		// 这里想象一个人拿着手电筒, eye 和 light 的坐标相同
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "spotLight_.pos"), 1, glm::value_ptr(camera.GetPos()));
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "spotLight_.direc"), 1, glm::value_ptr(glm::normalize(camera.GetFront())));
+		
+		// 但仍要考虑衰减(本例点光源和聚光采用同样的衰减参数)
+		boxShaderProgram.SetUniform("attenuation_.constant", 1.f); // "光强" 衰减常数项
+		boxShaderProgram.SetUniform("attenuation_.linear", 0.07f); // "光强" 衰减一次项(线性衰减)
+		boxShaderProgram.SetUniform("attenuation_.quadratic", 0.017f); // "光强" 衰减二次项
+		
+		// 切广角参数
 		// 直接传递余弦值, 避免在 GPU 中计算
-		boxShaderProgram.SetUniform("light_.phi", glm::cos(glm::radians(12.5f))); // 内切光角的余弦
-		boxShaderProgram.SetUniform("light_.gamma", glm::cos(glm::radians(17.5f))); // 外切光角的余弦
+		boxShaderProgram.SetUniform("spotLight_.phi", glm::cos(glm::radians(12.5f))); // 内切光角的余弦
+		boxShaderProgram.SetUniform("spotLight_.gamma", glm::cos(glm::radians(17.5f))); // 外切光角的余弦
 
+		// 平行光, 光源指向物体的光
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "direcLight_.ambientColor"), 1, glm::value_ptr(glm::vec3(0.1f) * lightColor));
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "direcLight_.diffuseColor"), 1, glm::value_ptr(glm::vec3(0.6f) * lightColor));
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "direcLight_.specularColor"), 1, glm::value_ptr(glm::vec3(0.8f)* lightColor));
+		glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "direcLight_.direc"), 1, glm::value_ptr(glm::vec3(-0.2f, -1.f, -0.3f)));
+
+		//点光源
+		auto SetPtLightUniform = [&boxShaderProgram, &lightColor, &pointLightPositions](int i){
+			glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "pointLight_[i].ambientColor"), 1, glm::value_ptr(glm::vec3(0.2f) * lightColor));
+			glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "pointLight_[i].diffuseColor"), 1, glm::value_ptr(glm::vec3(0.8f) * lightColor));
+			glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "pointLight_[i].specularColor"), 1, glm::value_ptr(glm::vec3(1.f)* lightColor));
+			glUniform3fv(glGetUniformLocation(boxShaderProgram.ID(), "pointLight_[i].pos"), 1, glm::value_ptr(pointLightPositions[i]));
+		};
+		for(int i = 0; i < 4; ++i) {SetPtLightUniform(i);}
 		//material
 		boxShaderProgram.SetUniform("material_.diffuseTexer",0);
 		boxShaderProgram.SetUniform("material_.specularTexer",1);
