@@ -84,6 +84,7 @@ namespace wxy
 		glm::mat4 GetViewMatrix() {return glm::lookAt(_pos, _front + _pos, _up);}
 		float GetFov() {return _fov;}
 		glm::vec3 GetPos() {return _pos;}
+		glm::vec3 GetFront() {return _front;}
 	private:
 	    void updateCameraVectors()
 		{
