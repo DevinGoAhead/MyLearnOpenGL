@@ -17,7 +17,7 @@ int main() {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // 核心模式
-
+ 
 	//创建窗口, 800 600 为初始尺寸
 	GLFWwindow* pWindow = glfwCreateWindow(800, 600, "Model Importing", NULL, NULL);
 	glfwMaximizeWindow(pWindow); // 最大化窗口
