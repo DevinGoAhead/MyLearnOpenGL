@@ -1,8 +1,9 @@
 #ifndef CAMERA
 #define CAMERA
 
-#include "../../include/glm/glm.hpp"
-#include "../../include/glm/gtc/matrix_transform.hpp"
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+
 namespace wxy
 {
 	const float Pitch = 0.f;

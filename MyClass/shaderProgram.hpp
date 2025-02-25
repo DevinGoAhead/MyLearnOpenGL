@@ -2,9 +2,9 @@
 #ifndef MY_SHADER
 #define MY_SHADER
 
-#include "glad\glad.h"
-#include "glm\glm.hpp"
-#include "glm\gtc\type_ptr.hpp"
+#include "glad/glad.h"
+#include "glm/glm.hpp"
+#include "glm/gtc/type_ptr.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -29,7 +29,7 @@ namespace wxy{
 		template<typename T, typename... Args>
 		void SetUniform(const std::string& uniformName, T value, Args... args);
 		template<typename T>
-		void SetUniformv(const std::string& uniformName, GLsizei count, T& value);
+		void SetUniformv(const std::string& uniformName, GLsizei count, GLboolean transpose, T& value);
 		GLuint ID() {return _shaderProgram;}
 	private:
 		void FileToString(const std::string& FilePath, std::string& strDestination);// 将文件内容 "拷贝" 至字符串
@@ -109,11 +109,11 @@ namespace wxy{
 	}
 
 	template<typename T>
-	void ShaderProgram::SetUniformv(const std::string& uniformName, GLsizei count, T& value)
+	void ShaderProgram::SetUniformv(const std::string& uniformName, GLsizei count, GLboolean transpose, T& value)
 	{
 		GLuint uniformLocation = glGetUniformLocation(_shaderProgram, uniformName.c_str());
-		if constexpr (std::is_same_v<T, glm::vec3>){glUniform3fv(uniformLocation, count, glm::value_ptr(value));}
-		if constexpr (std::is_same_v<T, glm::mat4>){glUniformMatrix4fv(uniformLocation, count, glm::value_ptr(value));}
+		if constexpr (std::is_same_v<T, glm::vec3>){glUniform3fv(uniformLocation, count, transpose, glm::value_ptr(value));}
+		if constexpr (std::is_same_v<T, glm::mat4>){glUniformMatrix4fv(uniformLocation, count, transpose, glm::value_ptr(value));}
 	}
 	void ShaderProgram::FileToString(const std::string& FilePath, std::string& strDestination)
 	{
