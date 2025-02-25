@@ -3,14 +3,15 @@ layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexCoords;
 
-out vec2 TexCoords;
+out vec2 _TexCoords_;
 
-uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
+uniform mat4 model_;
+uniform mat4 view_;
+uniform mat4 project_;
 
 void main()
 {
-    TexCoords = aTexCoords;    
-    gl_Position = projection * view * model * vec4(aPos, 1.0);
+    _TexCoords_ = aTexCoords;
+    gl_Position = project_ * view_ * model_ * vec4(aPos, 1.0);
+	//gl_Position = vec4(aPos, 1.0);
 }

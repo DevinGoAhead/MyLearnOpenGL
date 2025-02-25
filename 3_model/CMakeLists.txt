@@ -1,21 +1,24 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.20)
 project(Model)
 
-cmake_path(GET CMAKE_CURRENT_SOURCE_DIR PARENT_PATH rootDir)
-cmake_path(GET rootDir PARENT_PATH rootDir)
-set(AssimpDir "D:/libraries/assimp_5_4_0")
+set(packagesDir "$ENV{HOME}") #直接获取系统环境变量
+set(packagesDir "${packagesDir}/packages")
+set(libDir "${packagesDir}/lib")
+message(STATUS "~~~~~${packagesDir}~~~~~~")
 
-# 告诉编译器去哪里查找头文件和库文件
-include_directories(${rootDir}/include)
-include_directories(${rootDir}/source)
-link_directories(${rootDir}/lib)
+# 头文件目录
+include_directories(${packagesDir}/include)
 
-include_directories(${AssimpDir}/include)
-message(STATUS "~~~~~${AssimpDir}/include~~~~~~")
-link_directories(${AssimpDir}/build/bin)
-message(STATUS "~~~~~${AssimpDir}/build/bin~~~~~~")
-
+# 编译
 add_compile_options(-Wall -std=c++17)
-add_executable(model model.hpp mesh.hpp global.h main.cc)# 生成可执行文件
+#add_executable(model model.hpp mesh.hpp main.cc)# 生成可执行文件
+add_executable(model model.hpp mesh.hpp main.cc)# 生成可执行文件
 
-target_link_libraries(model libglad.a libglfw3.a libassimp-5.dll)# 链接库，这里使用的是静态库
+# 指明编译阶段库文件
+target_link_libraries(model
+${libDir}/libglfw.so 
+${libDir}/libglad.a 
+${libDir}/libassimp.so)
+
+# 指明运行阶段的库文件路径
+set(CMAKE_INSTALL_RPATH "${libDir}")

@@ -1,67 +1,12 @@
 #ifndef __GLOBAL
 #define __GLOBAL
 
-#include "MyClass\camera.hpp"
+#include "glad/glad.h"
+#include "glfw/glfw3.h"
 
-// 顶点数据
-GLfloat vertices[] = {
-    // positions          // normals           // texture coords
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
-     0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+#include <iostream>
+#include "../MyClass/camera.hpp"
 
-    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
-
-    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-
-     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-
-    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
-
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
-};
-
-// 让箱子分别平移到 10 个不同的位置
-glm::vec3 cubePositions[] = {
-	glm::vec3( 0.0f,  0.0f,  0.0f), 
-	glm::vec3( 2.0f,  5.0f, -15.0f), 
-	glm::vec3(-1.5f, -2.2f, -2.5f),  
-	glm::vec3(-3.8f, -2.0f, -12.3f),  
-	glm::vec3( 2.4f, -0.4f, -3.5f),  
-	glm::vec3(-1.7f,  3.0f, -7.5f),  
-	glm::vec3( 1.3f, -2.0f, -2.5f),  
-	glm::vec3( 1.5f,  2.0f, -2.5f), 
-	glm::vec3( 1.5f,  0.2f, -1.5f), 
-	glm::vec3(-1.3f,  1.0f, -1.5f)  
-  };
 
 // window
 int wndWidth, wndHeight;
@@ -136,5 +81,33 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	// 通常滚轮向下是一个放大的操作, 而滚轮向下会导致一个 > 0 的 yoffset, 这与我们预期一致
 	camera.ProcessMouseScroll(xoffset,  yoffset);
+}
+
+GLFWwindow* Initialize() {
+	glfwSetErrorCallback(error_callback); // 设置回调, 捕获 glfw 错误
+	glfwInit(); //GLFW 初始化
+
+	// openGL 上下文配置
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // 核心模式
+
+	//创建窗口, 800 600 为初始尺寸
+	GLFWwindow* pWindow = glfwCreateWindow(800, 600, "lighting", NULL, NULL);
+	glfwMaximizeWindow(pWindow); // 最大化窗口
+	glfwMakeContextCurrent(pWindow); // 设置 pWindow 窗口为当前上下文
+
+	if(!gladLoadGLLoader(GLADloadproc(glfwGetProcAddress))) {std::cerr << "Initilize GLAD error" << std::endl;}// 初始化 GLAD
+
+	glfwGetFramebufferSize(pWindow, &wndWidth, &wndHeight); // 获取缓冲区尺寸
+	glViewport(0, 0, wndWidth, wndHeight); // 设定视口尺寸
+	
+	glfwSetFramebufferSizeCallback(pWindow,viewport_size_callback);// 注册视口尺寸自动调整回调函数
+	glfwSetKeyCallback(pWindow, key_callback);// 注册键盘动作处理回调函数
+	glfwSetCursorPosCallback(pWindow, cursor_callback);// 注册光标捕捉函数
+	glfwSetScrollCallback(pWindow, scroll_callback);// 注册滚轮捕捉函数
+
+	return pWindow;
 }
 #endif

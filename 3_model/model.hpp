@@ -37,6 +37,7 @@ namespace wxy {
 	}
 	void Model::Draw(ShaderProgram shaderProgram) {
 		uint size = _meshes.size();
+		//std::cout << size << std::endl;
 		for(uint i = 0; i <  size; ++i) {
 			_meshes[i].Draw(shaderProgram);
 		}
@@ -181,7 +182,6 @@ namespace wxy {
 
 		return textureID;
 	}
-
 }
 
 #endif
