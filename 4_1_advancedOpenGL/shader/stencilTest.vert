@@ -12,7 +12,6 @@ uniform mat4 project_;
 
 out vec2 _verTexCoords_;
 
-
 void main()
 {
 	gl_Position = project_ * view_ * model_ * vec4(vertex_v, 1.0f);// 转换为齐次坐标

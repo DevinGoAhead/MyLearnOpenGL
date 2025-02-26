@@ -105,40 +105,39 @@ int main()
 	TexParameteri(); // 设置纹理参数
 	GenerateTexImg("../resources/textures/marble.jpg");// 加载并生成纹理对象
 	
-	glEnable(GL_DEPTH_TEST);// 启用深度测试
+	wxy::ShaderProgram shaderProgram("./shader/stencilTest.vert", "./shader/stencilTest.frag");
+	wxy::ShaderProgram shaderProgramSg("./shader/stencilTest.vert", "./shader/stencilTestSingleColor.frag");
 
-	wxy::ShaderProgram shaderProgram("./shader/boxVS.vert", "./shader/boxFS.frag");
+	glEnable(GL_STENCIL_TEST); // 启用模板测试
+	// 模板缓冲, 缓冲区值 stencil, 初始值为0
+	// ref & funcMask 与 stencil & FuncMask 比较, 根据func 的设置判断是否通过测试
+	// 本例 funcMask 为 0xFF, func为 GL_NOTEQUAL, 表示 ref & funcMask !=  stencil & FuncMask 则通过测试
+	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+	// 深度测试通过表示不被其它物体遮挡的frag
+	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);// 当深度测试和模板测试都通过后, 将模板缓冲值替换为 glStencilFunc 函数设置的 ref 值
+
+	glEnable(GL_DEPTH_TEST);// 启用深度测试
+	glDepthFunc(GL_LESS); // 禁用深度测试再启用后, 不需要重新配置深度函数
 
 	// 主循环
 	glfwSwapInterval(1); // 前后缓冲区交换间隔
 	while(!glfwWindowShouldClose(pWindow))
 	{
+		
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);//设置清除颜色缓冲区后要使用的颜色-纯色
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // 清楚颜色缓冲区和深度缓冲区
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // 清楚颜色缓冲区, 深度缓冲区, 模板缓冲
 
 		curTime = glfwGetTime();
 		perFrameTime = curTime - lastTime;
 		lastTime = curTime;
+		
+		shaderProgram.Use(); // 绘制初始箱子和地板
 
-		shaderProgram.Use();
-		// draw cube
-		// 纹理
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture0);
-		shaderProgram.SetUniform("texturer0_",0);
-
-		// 变换矩阵
+		// 视图变换矩阵和投影变换矩阵是所有对象共用
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 project = glm::perspective(glm::radians(camera.GetFov()), (float)wndWidth / (float)wndHeight, 0.1f, 100.f); 
-		shaderProgram.SetUniformv("view_", 1,view);
+		shaderProgram.SetUniformv("view_", 1, view);
 		shaderProgram.SetUniformv("project_", 1, project);
-
-		glBindVertexArray(cubeVAO);
-		for(const auto& position : cubePositions) {
-			glm::mat4 cubeModel = glm::translate(glm::mat4(1.f), position);
-			shaderProgram.SetUniformv("model_", 1, cubeModel);
-			glDrawArrays(GL_TRIANGLES, 0, 36);
-		}
 		
 		// draw plane
 		// texture
@@ -146,10 +145,51 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, texture1);
 		shaderProgram.SetUniform("texturer0_",1);
 		
-		glBindVertexArray(planeVAO);
-		shaderProgram.SetUniformv("model_", 1, glm::mat4(1.f));
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+		// 模板缓冲禁止任何位写入, 因此 draw plane 时, 模板缓冲 stencil 将保持为0
+		glStencilMask(0);
 
+		glBindVertexArray(planeVAO);
+		shaderProgram.SetUniformv("model_", 1, glm::mat4(1.f)); // 模型矩阵
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		// 此时模板缓冲值均为0
+		
+		// draw cube
+		// 纹理
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture0);
+		shaderProgram.SetUniform("texturer0_",0);
+		
+		glStencilMask(0xFF); // 虽然允许写入所有位, 但是 ref 为1, 所以也仅仅是将低1位写为了1而已
+
+		glBindVertexArray(cubeVAO);
+		for(const auto& position : cubePositions) {
+			glm::mat4 cubeModel = glm::translate(glm::mat4(1.f), position);
+			shaderProgram.SetUniformv("model_", 1, cubeModel);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+			// cube 对应的 frag(还要满足没有被其它物体遮挡, 即通过了深度测试) 的 stencil时被写为了 1
+		}
+		
+		// draw scaled cube
+		// 禁用深度测试, 应用画家算法, 即后draw 的一定是在最前面的可以被看到的, 不被遮挡的
+		// 这是确保轮廓能连接起来的关键
+		glDisable(GL_DEPTH_TEST); 
+		
+		shaderProgramSg.Use();
+		shaderProgramSg.SetUniformv("view_", 1, view);
+		shaderProgramSg.SetUniformv("project_", 1, project);
+
+		for(const auto& position : cubePositions) {
+			// 不同作用域, 就还用一样的名称吧
+			glm::mat4 cubeModel = glm::translate(glm::mat4(1.f), position); // 先移动到第一组 cube 的位置
+			cubeModel = glm::scale(cubeModel, glm::vec3(1.1f, 1.1f, 1.1f)); // 放大0.1倍
+			shaderProgramSg.SetUniformv("model_", 1, cubeModel);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+			// 放大后, 超出原来cube 的区域, 此时的frag 的 stencil 为0
+			// 与原来cube 重合的区域, 此时的frag 的 stencil 为1
+			// 而我们的ref为1, 经过各自的 & 运算后, 显然超出部分的比较结果是 != 的,
+			// 因而超出部分会通过模板测试, 被绘制, 同时对应的 stencil 会被写为 1
+		}
+		glEnable(GL_DEPTH_TEST);// 启用深度测试
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区
 		glfwPollEvents(); // 轮询 - glfw 与 窗口通信
 	}
