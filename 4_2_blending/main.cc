@@ -157,6 +157,9 @@ int main()
 		shaderProgram.SetUniformv("model_", 1, glm::mat4(1.f)); // 模型矩阵
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 		
+		// 启用面剔除, 默认剔除背向面(观察视角的顺时针面)
+		// 仅绘制封闭的箱子开启面剔除即可
+		glEnable(GL_CULL_FACE); 
 		// draw cube
 		// 纹理
 		glActiveTexture(GL_TEXTURE0);
@@ -170,6 +173,7 @@ int main()
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 
+		glDisable(GL_CULL_FACE);
 		// draw window
 		// 纹理
 		glActiveTexture(GL_TEXTURE2);
