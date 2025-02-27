@@ -9,6 +9,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include <vector>
+#include <map>
 #include "../MyClass/shaderProgram.hpp"
 #include "../MyClass/camera.hpp"
 
@@ -70,7 +71,7 @@ std::vector<float> planeVertices = {
 };
 
 // 透明四边形, 为了贴草纹理
-std::vector<float> transparentVertices = {
+std::vector<float> trasptVertices = {
 	// positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
 	0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
 	0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
@@ -96,7 +97,7 @@ std::vector <glm::vec3> cubePositions = {
   };
 
 // 让草分别平移到 5 个不同的位置
-std::vector<glm::vec3> vegetationPositions = {
+std::vector<glm::vec3> trasptPositions = {
 	glm::vec3(-1.5f, 0.0f, -0.48f),
 	glm::vec3(1.5f, 0.0f, 0.51f),
 	glm::vec3(0.f, 0.0f, 0.7f),

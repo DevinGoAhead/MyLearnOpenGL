@@ -7,7 +7,6 @@ uniform sampler2D texturer0_;
 
 void main()
 {
-	vec4 texColor = texture(texturer0_, _verTexCoords_);
-	if(texColor.a < 0.01f) {discard;} // .a 值alpha 分量, 如果透明则丢弃该frag
-	_fragColor_ = texColor;
+	_fragColor_ = texture(texturer0_, _verTexCoords_);
+	//_fragColor_ = texColor;
 }

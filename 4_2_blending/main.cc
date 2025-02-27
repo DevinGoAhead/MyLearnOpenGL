@@ -17,7 +17,7 @@ int main()
 	glfwMakeContextCurrent(pWindow); // 设置 pWindow 窗口为当前上下文
 
 	if(!gladLoadGLLoader(GLADloadproc(glfwGetProcAddress))) {std::cerr << "Initilize GLAD error" << std::endl;}// 初始化 GLAD
-
+	std::cout << glGetString(GL_VERSION);
 	glfwGetFramebufferSize(pWindow, &wndWidth, &wndHeight); // 获取缓冲区尺寸
 	glViewport(0, 0, wndWidth, wndHeight); // 设定视口尺寸
 	
@@ -55,14 +55,14 @@ int main()
 	SetVertices(planeVBO, planeVAO, planeVertices);
 
 	GLuint trasptVBO, trasptVAO;
-	SetVertices(trasptVBO, trasptVAO,transparentVertices);
+	SetVertices(trasptVBO, trasptVAO,trasptVertices);
 
-	//纹理
-	// 纹理参数设置
-	auto TexParameteri = [](){
+	// 纹理
+	// 纹理参数设置，需要传递纹理环绕参数
+	auto TexParameteri = [](GLint param){
 		// 2D 纹理, ST 坐标, 超出边界重复
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, param);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, param);
 
 		// 纹理映射缩放算法
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);//纹理若被放大, 则线性插值
@@ -95,7 +95,7 @@ int main()
 	// 将 texture0 绑定到 纹理单元0 的 GL_TEXTURE_2D
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture0);
-	TexParameteri(); // 设置纹理参数
+	TexParameteri(GL_REPEAT); // 设置纹理参数
 	GenerateTexImg("../resources/textures/metal.png");// 加载并生成纹理对象
 
 	GLuint texture1;
@@ -103,7 +103,7 @@ int main()
 	// 激活纹理单元1, 并绑定 texture1
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, texture1);
-	TexParameteri(); // 设置纹理参数
+	TexParameteri(GL_REPEAT); // 设置纹理参数
 	GenerateTexImg("../resources/textures/marble.jpg");// 加载并生成纹理对象
 
 	GLuint texture2;
@@ -111,20 +111,22 @@ int main()
 	// 激活纹理单元2, 并绑定 texture2
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, texture2);
-	TexParameteri(); // 设置纹理参数
+	TexParameteri(GL_CLAMP_TO_EDGE); // 设置纹理参数, *这里采用不同的纹理环绕方式*
 	//stbi_set_flip_vertically_on_load(true); // 纹理坐标已经设置反转了，这里不需要再次设置了
-	GenerateTexImg("../resources/textures/grass.png");// 加载并生成纹理对象
+	GenerateTexImg("../resources/textures/window.png");// 加载并生成纹理对象
 	
 	wxy::ShaderProgram shaderProgram("./shader/blend.vert", "./shader/blend.frag");
 
 	glEnable(GL_DEPTH_TEST);// 启用深度测试
 	glDepthFunc(GL_LESS); // 禁用深度测试再启用后, 不需要重新配置深度函数
 
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alphaSrc * colorSrc + (1 - alphaSrc) * colorDest
+
 	// 主循环
 	glfwSwapInterval(1); // 前后缓冲区交换间隔
 	while(!glfwWindowShouldClose(pWindow))
 	{
-		
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);//设置清除颜色缓冲区后要使用的颜色-纯色
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // 清楚颜色缓冲区, 深度缓冲区, 模板缓冲
 
@@ -132,7 +134,12 @@ int main()
 		perFrameTime = curTime - lastTime;
 		lastTime = curTime;
 		
-		shaderProgram.Use(); // 绘制初始箱子和地板,草
+		// 透明物体排序，升序
+		std::map<float, glm::vec3> trasptWnds;
+		int size = trasptPositions.size();
+		for(int i = 0; i < size; ++i) {trasptWnds[glm::distance(camera.GetPos(), trasptPositions[i])] = trasptPositions[i];}
+
+		shaderProgram.Use(); // 绘制初始箱子和地板, 草
 
 		// 视图变换矩阵和投影变换矩阵是所有对象共用
 		glm::mat4 view = camera.GetViewMatrix();
@@ -149,7 +156,6 @@ int main()
 		glBindVertexArray(planeVAO);
 		shaderProgram.SetUniformv("model_", 1, glm::mat4(1.f)); // 模型矩阵
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-		// 此时模板缓冲值均为0
 		
 		// draw cube
 		// 纹理
@@ -164,16 +170,17 @@ int main()
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 
-		// draw vegetation
+		// draw window
 		// 纹理
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, texture2);
 		shaderProgram.SetUniform("texturer0_",2);
 
 		glBindVertexArray(trasptVAO);
-		for(const auto& position : vegetationPositions) {
-			glm::mat4 vegetationModel = glm::translate(glm::mat4(1.f), position);
-			shaderProgram.SetUniformv("model_", 1, vegetationModel);
+		// 先绘制最远的透明物体, 由于原来是升序， 故逆序绘制
+		for(auto rIter = trasptWnds.rbegin(); rIter != trasptWnds.rend(); ++rIter) {
+			glm::mat4 wndModel = glm::translate(glm::mat4(1.f), rIter->second); // 获得迭代器对应的 value
+			shaderProgram.SetUniformv("model_", 1, wndModel);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 		
