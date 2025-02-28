@@ -27,8 +27,24 @@ int main()
 	glfwSetScrollCallback(pWindow, scroll_callback);// 注册滚轮捕捉函数
 	
 	// 顶点
+
+	// 顶点着色器 location index, 属性元素分量, 类型, 是否标准化, 步距, 相对起点偏移
+	auto Set3DVertAttrPtr = [](){
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0); // 顶点坐标
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float))); // 纹理
+		glEnableVertexAttribArray(0); // 启用location 0
+		glEnableVertexAttribArray(1); // 启用location 1
+	};
+
+	auto Set2DVertAttrPtr = [](){
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0); // 顶点坐标
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float))); // 纹理
+		glEnableVertexAttribArray(0); // 启用location 0
+		glEnableVertexAttribArray(1); // 启用location 1
+	};
+
 	// VBO VAO 只能是引用传递或指针传递
-	auto SetVertices = [](GLuint& VBO, GLuint& VAO, const std::vector<float>& Vertices){
+	auto SetVertices = [&](GLuint& VBO, GLuint& VAO, const std::vector<float>& Vertices, int dimension){
 		glGenBuffers(1, &VBO); // 创建 Buffer 对象, 绑定到 ID VBO 上
 		glBindBuffer(GL_ARRAY_BUFFER, VBO); // 将 VBO 绑定在 GL_ARRAY_BUFFER 上
 
@@ -38,24 +54,21 @@ int main()
 		glGenVertexArrays(1, &VAO); // 创建 vertexArray, 绑定到 ID VAO 上
 		glBindVertexArray(VAO); // 绑定 VAO 到 openGL 上下文, 开始记录信息
 
-		// 顶点着色器 location index, 属性元素分量, 类型, 是否标准化, 步距, 相对起点偏移
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0); // 顶点坐标
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float))); // 纹理
-		glEnableVertexAttribArray(0); // 启用location 0
-		glEnableVertexAttribArray(1); // 启用location 1
+		if(dimension == 2) {Set2DVertAttrPtr();}
+		else if(dimension == 3) {Set3DVertAttrPtr();}
 
 		glBindVertexArray(0); // 将 VAO 从 OpenGL 当前上下文解绑
 	};
 
 	// 顶点数据在 global.h 中
-	GLuint cubeVBO, cubeVAO;
-	SetVertices(cubeVBO, cubeVAO, cubeVertices);
+	GLuint cubeVBO, cubeVAO; // cube
+	SetVertices(cubeVBO, cubeVAO, cubeVertices, 3);
 
-	GLuint planeVBO, planeVAO;
-	SetVertices(planeVBO, planeVAO, planeVertices);
+	GLuint planeVBO, planeVAO; // plane
+	SetVertices(planeVBO, planeVAO, planeVertices, 3);
 
-	GLuint trasptVBO, trasptVAO;
-	SetVertices(trasptVBO, trasptVAO,trasptVertices);
+	GLuint quadVBO, quadVAO; // quadrangle
+	SetVertices(quadVBO, quadVAO,quadVertices, 2);
 
 	// 纹理
 	// 纹理参数设置，需要传递纹理环绕参数
@@ -73,8 +86,7 @@ int main()
 	auto GenerateTexImg = [](const char* pathName){
 		int texWidth, texHeight, nRChannels;
 		unsigned char* pImageData = stbi_load(pathName, &texWidth, &texHeight, &nRChannels, 0);
-		if(!pImageData) 
-		{
+		if(!pImageData) {
 			std::cerr << "STBI::ERROR::failed to load Image" << '\n';
 			exit(1);
 		}
@@ -106,87 +118,110 @@ int main()
 	TexParameteri(GL_REPEAT); // 设置纹理参数
 	GenerateTexImg("../resources/textures/marble.jpg");// 加载并生成纹理对象
 
-	GLuint texture2;
-	glGenTextures(1, &texture2); // 将纹理对象绑定到的 ID 绑定到texture1
-	// 激活纹理单元2, 并绑定 texture2
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, texture2);
-	TexParameteri(GL_CLAMP_TO_EDGE); // 设置纹理参数, *这里采用不同的纹理环绕方式*
-	//stbi_set_flip_vertically_on_load(true); // 纹理坐标已经设置反转了，这里不需要再次设置了
-	GenerateTexImg("../resources/textures/window.png");// 加载并生成纹理对象
+	int framWidth, framHeight;
+	glfwGetFramebufferSize(pWindow, &framWidth, &framHeight);
+	// 创建自定义帧缓冲
+	uint framBufObj;
+	glGenFramebuffers(1, &framBufObj); // 创建帧缓冲对象, 绑定framBufObj
+	glBindFramebuffer(GL_FRAMEBUFFER, framBufObj); // 绑定到可渲染, 可读取的帧缓冲目标上
+
+	// 创建纹理缓冲, 用作颜色缓冲
+	uint texBufObj;
+	glGenTextures(1, &texBufObj); // 创建纹理对象, 绑定 texBufObj
+	glBindTexture(GL_TEXTURE_2D, texBufObj); // 绑定到 2D纹理目标上
+	// 一般不会设置越界的纹理坐标, 仅仅是恰好贴合即可
+	// 纹理映射缩放算法, 不涉及相机距离问题, 因此也不关心 MipMap
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); //纹理若被放大, 则线性插值
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); //纹理若被缩小, 则选择邻近像素即可
+
+	// 确定纹理缓冲的大小, 通常与视口大小匹配即可, 不填充图像, 仅仅是一个空的纹理, 后面将渲染结果保存在这里
+	// format 根据需要设置
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, framWidth, framHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	// 绑定到帧缓冲
+	// 目标帧缓冲类型, 当前绑定缓冲的作用(本例是颜色缓冲), 纹理类型, 
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texBufObj, 0);
+
+	// 创建渲染缓冲, 用于模板缓冲和深度缓冲
+	uint rendBufObj;
+	glGenRenderbuffers(1, &rendBufObj); // 创建渲染缓冲, 绑定 rendBufObj
+	glBindRenderbuffer(GL_FRAMEBUFFER, rendBufObj); // 绑定到目标GL_FRAMEBUFFER, 目前阶段, 仅 GL_FRAMEBUFFER 一个类型
+	// 8位用作模板缓冲, 24位用作颜色缓冲, 同时确定缓冲区尺寸(大小)
+	glRenderbufferStorage(GL_FRAMEBUFFER, GL_DEPTH24_STENCIL8,framWidth, framHeight);
 	
-	wxy::ShaderProgram shaderProgram("./shader/blend.vert", "./shader/blend.frag");
+	//参数含义与 glFramebufferTexture2D 类似
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rendBufObj);
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		std::cout << "GL::ERROR:: FrameBuffer is not complete" << std::endl;
+	}
+	
+	// 将帧缓冲绑定为默认帧缓冲
+	// 但是我感觉这里不仅没必要, 而且徒增麻烦
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); 
 
-	glEnable(GL_DEPTH_TEST);// 启用深度测试
-	glDepthFunc(GL_LESS); // 禁用深度测试再启用后, 不需要重新配置深度函数
-
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alphaSrc * colorSrc + (1 - alphaSrc) * colorDest
+	wxy::ShaderProgram shaderPrgmScene("./shader/scene.vert", "./shader/scene.frag");
+	wxy::ShaderProgram shaderPrgmScreen("./shader/screen.vert", "./shader/screen.frag");
 
 	// 主循环
 	glfwSwapInterval(1); // 前后缓冲区交换间隔
 	while(!glfwWindowShouldClose(pWindow))
 	{
+		glBindFramebuffer(GL_FRAMEBUFFER, framBufObj); // 将自定义帧缓冲绑定到目标上
+		glEnable(GL_DEPTH_TEST);// 启用深度测试, 因为后面要关闭深度测试, 因此需要将深度测试打开放到循环中
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);//设置清除颜色缓冲区后要使用的颜色-纯色
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // 清楚颜色缓冲区, 深度缓冲区, 模板缓冲
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // 清楚颜色缓冲区, 深度缓冲区, 本例不需要模板缓冲
 
 		curTime = glfwGetTime();
 		perFrameTime = curTime - lastTime;
 		lastTime = curTime;
-		
-		// 透明物体排序，升序
-		std::map<float, glm::vec3> trasptWnds;
-		int size = trasptPositions.size();
-		for(int i = 0; i < size; ++i) {trasptWnds[glm::distance(camera.GetPos(), trasptPositions[i])] = trasptPositions[i];}
 
-		shaderProgram.Use(); // 绘制初始箱子和地板, 草
+		// 这里 绑定 GL_FRAMBUFFER 的还是自定义的帧缓冲, 所以渲染结果都会到自定义帧缓冲上
+		shaderPrgmScene.Use(); // 绘制箱子和地板
 
 		// 视图变换矩阵和投影变换矩阵是所有对象共用
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 project = glm::perspective(glm::radians(camera.GetFov()), (float)wndWidth / (float)wndHeight, 0.1f, 100.f); 
-		shaderProgram.SetUniformv("view_", 1, view);
-		shaderProgram.SetUniformv("project_", 1, project);
+		shaderPrgmScene.SetUniformv("view_", 1, view);
+		shaderPrgmScene.SetUniformv("project_", 1, project);
 		
 		// draw plane
 		// texture
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, texture1);
-		shaderProgram.SetUniform("texturer0_",1);
+		shaderPrgmScene.SetUniform("texturer0_",1);
 
 		glBindVertexArray(planeVAO);
-		shaderProgram.SetUniformv("model_", 1, glm::mat4(1.f)); // 模型矩阵
+		shaderPrgmScene.SetUniformv("model_", 1, glm::mat4(1.f)); // 模型矩阵
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-		
-		// 启用面剔除, 默认剔除背向面(观察视角的顺时针面)
-		// 仅绘制封闭的箱子开启面剔除即可
-		glEnable(GL_CULL_FACE); 
+
 		// draw cube
 		// 纹理
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture0);
-		shaderProgram.SetUniform("texturer0_",0);
+		shaderPrgmScene.SetUniform("texturer0_",0);
 
 		glBindVertexArray(cubeVAO);
 		for(const auto& position : cubePositions) {
 			glm::mat4 cubeModel = glm::translate(glm::mat4(1.f), position);
-			shaderProgram.SetUniformv("model_", 1, cubeModel);
+			shaderPrgmScene.SetUniformv("model_", 1, cubeModel);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
+		//以上, 自定义帧缓冲渲染完成
 
-		glDisable(GL_CULL_FACE);
-		// draw window
+		// 映射到屏幕
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);// 将默认帧缓冲绑定到 GL_FRAMEBUFFER
+		glDisable(GL_DEPTH_TEST); // 2D 不需要深度测试
+		glClearColor(0.8f, 0.6f, 0.4f, 1.0f);//设置清除颜色缓冲区后要使用的颜色-纯色
+		glClear(GL_COLOR_BUFFER_BIT); // 清楚颜色缓冲区
+
+		shaderPrgmScreen.Use();
 		// 纹理
+		// 此时纹理缓冲的作用将和普通纹理对象相同, 需要激活纹理通道
 		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, texture2);
-		shaderProgram.SetUniform("texturer0_",2);
+		glBindTexture(GL_TEXTURE_2D, texBufObj);
+		shaderPrgmScreen.SetUniform("texturerScreen_",2);
 
-		glBindVertexArray(trasptVAO);
-		// 先绘制最远的透明物体, 由于原来是升序， 故逆序绘制
-		for(auto rIter = trasptWnds.rbegin(); rIter != trasptWnds.rend(); ++rIter) {
-			glm::mat4 wndModel = glm::translate(glm::mat4(1.f), rIter->second); // 获得迭代器对应的 value
-			shaderProgram.SetUniformv("model_", 1, wndModel);
-			glDrawArrays(GL_TRIANGLES, 0, 36);
-		}
+		glBindVertexArray(quadVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 		
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区
 		glfwPollEvents(); // 轮询 - glfw 与 窗口通信

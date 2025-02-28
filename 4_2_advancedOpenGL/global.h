@@ -13,6 +13,7 @@
 #include "../MyClass/shaderProgram.hpp"
 #include "../MyClass/camera.hpp"
 
+using uint = unsigned int;
 // 顶点数据
 std::vector<float> cubeVertices = {
 	    // Back face
@@ -70,18 +71,6 @@ std::vector<float> planeVertices = {
 	 5.0f, -0.5f, -5.0f,  2.0f, 2.0f
 };
 
-// 透明四边形, 为了贴草纹理
-std::vector<float> trasptVertices = {
-	// positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
-	0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
-	0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
-	1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
-
-	0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
-	1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
-	1.0f,  0.5f,  0.0f,  1.0f,  0.0f
-};
-
 // 让箱子分别平移到 3 个不同的位置
 std::vector <glm::vec3> cubePositions = {
 	//glm::vec3( 0.0f,  0.0f,  0.0f), 
@@ -96,14 +85,17 @@ std::vector <glm::vec3> cubePositions = {
 	// glm::vec3(-1.3f,  1.0f, -1.5f)  
   };
 
-// 让草分别平移到 5 个不同的位置
-std::vector<glm::vec3> trasptPositions = {
-	glm::vec3(-1.5f, 0.0f, -0.48f),
-	glm::vec3(1.5f, 0.0f, 0.51f),
-	glm::vec3(0.f, 0.0f, 0.7f),
-	glm::vec3(-0.3f, 0.0f, -2.3f),
-	glm::vec3(0.5f, 0.0f, -0.6f)
-  };
+// 一个四边形, 用于附加自定义帧缓冲的纹理缓冲
+std::vector<float> quadVertices = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+	// positions   // texCoords
+	-1.0f,  1.0f,  0.0f, 1.0f,
+	-1.0f, -1.0f,  0.0f, 0.0f,
+	 1.0f, -1.0f,  1.0f, 0.0f,
+
+	-1.0f,  1.0f,  0.0f, 1.0f,
+	 1.0f, -1.0f,  1.0f, 0.0f,
+	 1.0f,  1.0f,  1.0f, 1.0f
+};
 
 // window
 int wndWidth, wndHeight;
