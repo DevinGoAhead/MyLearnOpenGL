@@ -132,7 +132,7 @@ int main()
 	// 一般不会设置越界的纹理坐标, 仅仅是恰好贴合即可
 	// 纹理映射缩放算法, 不涉及相机距离问题, 因此也不关心 MipMap
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); //纹理若被放大, 则线性插值
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); //纹理若被缩小, 则选择邻近像素即可
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //纹理若被缩小, 则选择邻近像素即可
 
 	// 确定纹理缓冲的大小, 通常与视口大小匹配即可, 不填充图像, 仅仅是一个空的纹理, 后面将渲染结果保存在这里
 	// format 根据需要设置
@@ -209,6 +209,7 @@ int main()
 
 		// 映射到屏幕
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);// 将默认帧缓冲绑定到 GL_FRAMEBUFFER
+		
 		glDisable(GL_DEPTH_TEST); // 2D 不需要深度测试
 		glClearColor(0.8f, 0.6f, 0.4f, 1.0f);//设置清除颜色缓冲区后要使用的颜色-纯色
 		glClear(GL_COLOR_BUFFER_BIT); // 清楚颜色缓冲区
