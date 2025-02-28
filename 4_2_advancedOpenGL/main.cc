@@ -108,7 +108,7 @@ int main()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture0);
 	TexParameteri(GL_REPEAT); // 设置纹理参数
-	GenerateTexImg("../resources/textures/metal.png");// 加载并生成纹理对象
+	GenerateTexImg("../resources/textures/container2.png");// 加载并生成纹理对象
 
 	GLuint texture1;
 	glGenTextures(1, &texture1); // 将纹理对象绑定到的 ID 绑定到texture1

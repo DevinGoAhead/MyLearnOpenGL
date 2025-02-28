@@ -7,8 +7,8 @@ uniform sampler2D texturerScreen_;
 
 void main()
 {
-	vec3 col = 1.f - texture(texturerScreen_, _verTexCoords_).rgb;
-	//col = vec3(1.f - col.x, 1.f - col.y, 1.f - col.z);
+	vec3 col = texture(texturerScreen_, _verTexCoords_).rgb;
+	//col = vec3((col.x + col.y + col.z) / 3); // 灰度
+	col = vec3(0.2 * col.r + 0.7 * col.g + 0.1 * col.b); // 灰度
 	_fragColor_ = vec4(col, 1.f);
-	//_fragColor_ = vec4(1.f);
 }
