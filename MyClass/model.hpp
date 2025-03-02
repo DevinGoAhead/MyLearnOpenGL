@@ -24,7 +24,7 @@ namespace wxy {
 		void ProcessNode(aiNode* assimpNode, const aiScene* assimpScene); // 遍历所有节点 及其 子节点
 		Mesh ProcessMesh(aiMesh* assimpMesh, const aiScene* assimpScene);
 		std::vector<Texture> loadMaterialTextures(aiMaterial* assimpMat, aiTextureType assimpTexType, const std::string& texTypeName);
-		uint TextureFromFile(const std::string& assimpTexFileName);
+		uint TextureFromFile(const std::string& assimpTexFileName/*, const std::string& texTypeName*/);
 	private:
 		std::vector<Mesh> _meshes; // 存放加载的所有mesh
 		std::map<std::string, Texture> _texturesLoaded; // 已经加载过的模型
@@ -59,7 +59,8 @@ namespace wxy {
 	void Model::ProcessNode(aiNode* assimpNode, const aiScene* assimpScene)
 	{
 		// 对于每一个节点, 都遍历它所有的 mesh (的索引)
-		for(uint i = 0; i < assimpNode->mNumMeshes; ++i) {
+		uint numMeshes = assimpNode->mNumMeshes;
+		for(uint i = 0; i < numMeshes; ++i) {
 			aiMesh* assimpMesh = assimpScene->mMeshes[assimpNode->mMeshes[i]];
 			_meshes.emplace_back(ProcessMesh(assimpMesh, assimpScene));
 		}
@@ -88,7 +89,7 @@ namespace wxy {
 			vertex._normal = vec3Temp;
 
 			glm::vec2 vec2Temp;
-			// Assimp 最多允许一个顶点上有 8 个坐标, 但本例现在仅使用第一组
+			// Assimp 最多允许一个顶点上有 8 组纹理坐标, 但本例现在仅使用第一组
 			if(assimpMesh->mTextureCoords[0]) { // 数组不为空
 				vec2Temp.x = assimpMesh->mTextureCoords[0][i].x;
 				vec2Temp.y = assimpMesh->mTextureCoords[0][i].y;
@@ -98,7 +99,7 @@ namespace wxy {
 
 			vertices.push_back(vertex);
 		}
-		// 每个 mesh 会有多个索引
+		// 每个 mesh 会有多个索引, 其实就是顶点索引, 指定了由哪几个点组成当前face
 		uint numFaces = assimpMesh->mNumFaces;
 		for(uint i = 0; i < numFaces; ++i) {
 			aiFace assimpFace = assimpMesh->mFaces[i];
@@ -116,6 +117,10 @@ namespace wxy {
 
 			std::vector<Texture> texesSpecular = loadMaterialTextures(assimpMaterial, aiTextureType_SPECULAR, "textureSpecular");
 			textures.insert(textures.end(),  texesSpecular.begin(), texesSpecular.end());
+			// // 由于 assimp 对反射纹理的支持性问题, 作者的素材中将反射纹理伪装成了 aiTextureType_AMBIENT
+			// // 因而下面虽然纹理类型是 aiTextureType_AMBIENT, 但实际加载的是反射纹理
+			// std::vector<Texture> texesReflection = loadMaterialTextures(assimpMaterial, aiTextureType_AMBIENT, "textureReflection");
+			// textures.insert(textures.end(),  texesReflection.begin(), texesReflection.end());
 		}
 		return Mesh{vertices, indices, textures};
 	}
@@ -135,15 +140,17 @@ namespace wxy {
 				texture._typeName = texTypeName;
 				texture._fileName = texFileName;
 				_texturesLoaded[texFileName] = texture;
+				textures.push_back(texture);
 			}
 			else// 已经被加载过了
-				textures.push_back(_texturesLoaded[texFileName]); // 不需要加载, 直接 push	
+				textures.push_back(_texturesLoaded[texFileName]); // 不需要加载, 直接 push
 		}
 
 		return textures;
 	}
 
-	uint Model::TextureFromFile(const std::string& assimpTexFileName) {
+	uint Model::TextureFromFile(const std::string& assimpTexFileName/*, const std::string& texTypeName*/) {
+		//GLenum target = (texTypeName == "textureReflection" ? GL_TEXTURE_2D : GL_TEXTURE_2D);
 		uint textureID;
 		glGenTextures(1, &textureID); // 生成纹理对象
 		glActiveTexture(GL_TEXTURE0); // 激活纹理单元0, 这里为多个纹理对象使用同一个纹理单元, 在 draw 之前再重新绑定准确的纹理单元

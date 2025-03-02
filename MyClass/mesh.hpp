@@ -42,7 +42,7 @@ namespace wxy{
 	private:
 		std::vector<Vertex> _vertices; // 实际的顶点数据
 		std::vector<uint> _indices; // 顶点索引
-		std::vector<Texture> _textures; // 顶点索引
+		std::vector<Texture> _textures; // 纹理
 
 		uint _VBO, _EBO, _VAO;
 	};
@@ -59,24 +59,23 @@ namespace wxy{
 	}
 	void Mesh::Draw(ShaderProgram shaderProgram) {
 		uint size = _textures.size();
-		// uint size2 = _vertices.size();
-		// uint size3 = _indices.size();
-		// std::cout << size2 << std::endl;
-		// std::cout << size3 << std::endl;
-		uint textureDiffuseNr = 1, textureSpecularNr = 1;
+
+		uint textureDiffuseNr = 0, textureSpecularNr = 0, textureReflectionNr = 0;
 		std::string number;
-
+		//GLenum target;
 		for(uint i = 0; i < size; ++i){
-			glActiveTexture(GL_TEXTURE0 + i); // 激活纹理单元
-			glBindTexture(GL_TEXTURE_2D, _textures[i]._id); // 告知该 ID 存储的是 2D 纹理, 并绑定到纹理单元
-
-			std::string texTypeName = _textures[i]._typeName; // _typeName: textureDiffuse textureSpecular
-
+			// _typeName: textureDiffuse textureSpecular textureReflection
+			std::string texTypeName = _textures[i]._typeName;
+			
+			//target = (texTypeName == "textureReflection" ? GL_TEXTURE_2D : GL_TEXTURE_2D);
+			//glBindTexture(target, _textures[i]._id); // 将纹理绑定到目标类型
+			glBindTexture(GL_TEXTURE_2D, _textures[i]._id); // 将纹理绑定到目标类型
 			if(texTypeName == "textureDiffuse") {number = std::to_string(textureDiffuseNr++);}
 			else if(texTypeName == "textureSpecular") {number = std::to_string(textureSpecularNr++);}
-
-			shaderProgram.SetUniform((texTypeName + number + '_'), i); // 将纹理单元的索引传递给 GPU 中对应的 Sampler 对象
+			else if(texTypeName == "textureReflection") {number = std::to_string(textureReflectionNr++);}
+			shaderProgram.SetUniform(("material_." + texTypeName + number).c_str(), i); // 将纹理单元的索引传递给 GPU 中对应的 Sampler 对象
 		}
+		shaderProgram.SetUniform("material_.shiness",32); // 这里暂先硬编码, 有需要再优化
 		glActiveTexture(GL_TEXTURE0); // 激活状态恢复到纹理单元 0
 
 		// draw
