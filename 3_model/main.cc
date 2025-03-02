@@ -34,7 +34,7 @@ int main() {
 	glfwSetScrollCallback(pWindow, scroll_callback);// 注册滚轮捕捉函数
 	
 	stbi_set_flip_vertically_on_load(true);
-	wxy::ShaderProgram shaderProgram("./shader/boxVS.glsl", "./shader/boxFS.glsl"); //着色器
+	wxy::ShaderProgram shaderProgram("./shader/model.vert", "./shader/model.frag"); //着色器
 
 	wxy::Model modeler(std::filesystem::absolute("./model/backpack/backpack.obj").string());
 
@@ -55,9 +55,9 @@ int main() {
 		
 		// set uniform
 		shaderProgram.Use();
-		shaderProgram.SetUniformv("model_", 1, GL_FALSE, model);
-		shaderProgram.SetUniformv("view_", 1, GL_FALSE, view);
-		shaderProgram.SetUniformv("project_", 1, GL_FALSE, project);
+		shaderProgram.SetUniformv("model_", 1, model);
+		shaderProgram.SetUniformv("view_", 1, view);
+		shaderProgram.SetUniformv("project_", 1, project);
 
 		// draw
 		modeler.Draw(shaderProgram);
