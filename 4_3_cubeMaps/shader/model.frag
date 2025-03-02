@@ -56,5 +56,4 @@ void main() {
 	// 综合
 	_fragColor_ = vec4(ambient + diffuse + specular + texReflection * envReflection, 1.f);
 	//_fragColor_ = vec4(ambient + diffuse + specular, 1.f);
-
 }

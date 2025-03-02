@@ -165,9 +165,9 @@ int main()
 		shaderPrgmModel.SetUniform("texerSkyBox_", 4);
 		
 		// 平行光, 光源指向物体的光
-		shaderPrgmModel.SetUniformv("direcLight_.ambientColor", 1, glm::vec3(0.2f));
-		shaderPrgmModel.SetUniformv("direcLight_.diffuseColor", 1, glm::vec3(0.5f));
-		shaderPrgmModel.SetUniformv("direcLight_.specularColor", 1, glm::vec3(0.1f));
+		shaderPrgmModel.SetUniformv("direcLight_.ambientColor", 1, glm::vec3(0.1f));
+		shaderPrgmModel.SetUniformv("direcLight_.diffuseColor", 1, glm::vec3(0.6f));
+		shaderPrgmModel.SetUniformv("direcLight_.specularColor", 1, glm::vec3(0.3f));
 		glm::vec3 lightDir = glm::normalize(glm::vec3(-0.2f, -1.1f, -0.3f));
 		shaderPrgmModel.SetUniformv("direcLight_.direc", 1, lightDir);
 		modeler.Draw(shaderPrgmModel);
