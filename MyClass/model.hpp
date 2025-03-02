@@ -117,10 +117,10 @@ namespace wxy {
 
 			std::vector<Texture> texesSpecular = loadMaterialTextures(assimpMaterial, aiTextureType_SPECULAR, "textureSpecular");
 			textures.insert(textures.end(),  texesSpecular.begin(), texesSpecular.end());
-			// // 由于 assimp 对反射纹理的支持性问题, 作者的素材中将反射纹理伪装成了 aiTextureType_AMBIENT
-			// // 因而下面虽然纹理类型是 aiTextureType_AMBIENT, 但实际加载的是反射纹理
-			// std::vector<Texture> texesReflection = loadMaterialTextures(assimpMaterial, aiTextureType_AMBIENT, "textureReflection");
-			// textures.insert(textures.end(),  texesReflection.begin(), texesReflection.end());
+			// 由于 assimp 对反射纹理的支持性问题, 作者的素材中将反射纹理伪装成了 aiTextureType_AMBIENT
+			// 因而下面虽然纹理类型是 aiTextureType_AMBIENT, 但实际加载的是反射纹理
+			std::vector<Texture> texesReflection = loadMaterialTextures(assimpMaterial, aiTextureType_AMBIENT, "textureReflection");
+			textures.insert(textures.end(),  texesReflection.begin(), texesReflection.end());
 		}
 		return Mesh{vertices, indices, textures};
 	}

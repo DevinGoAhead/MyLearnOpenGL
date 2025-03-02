@@ -66,7 +66,7 @@ namespace wxy{
 		for(uint i = 0; i < size; ++i){
 			// _typeName: textureDiffuse textureSpecular textureReflection
 			std::string texTypeName = _textures[i]._typeName;
-			
+			glActiveTexture(GL_TEXTURE0 + i);
 			//target = (texTypeName == "textureReflection" ? GL_TEXTURE_2D : GL_TEXTURE_2D);
 			//glBindTexture(target, _textures[i]._id); // 将纹理绑定到目标类型
 			glBindTexture(GL_TEXTURE_2D, _textures[i]._id); // 将纹理绑定到目标类型
@@ -75,7 +75,7 @@ namespace wxy{
 			else if(texTypeName == "textureReflection") {number = std::to_string(textureReflectionNr++);}
 			shaderProgram.SetUniform(("material_." + texTypeName + number).c_str(), i); // 将纹理单元的索引传递给 GPU 中对应的 Sampler 对象
 		}
-		shaderProgram.SetUniform("material_.shiness",32); // 这里暂先硬编码, 有需要再优化
+		shaderProgram.SetUniform("material_.shiness",64); // 这里暂先硬编码, 有需要再优化
 		glActiveTexture(GL_TEXTURE0); // 激活状态恢复到纹理单元 0
 
 		// draw
