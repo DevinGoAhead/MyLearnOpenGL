@@ -1,8 +1,8 @@
 #ifndef __GLOBAL
 #define __GLOBAL
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h" // 加载纹理图像
+// #define STB_IMAGE_IMPLEMENTATION
+// #include "stb_image.h" // 加载纹理图像
 #include "glad/glad.h"
 #include "glfw/glfw3.h"
 #include "glm/glm.hpp"
@@ -11,8 +11,10 @@
 #include <vector>
 #include <map>
 #include <functional>
+#include <filesystem>
 #include "../MyClass/shaderProgram.hpp"
 #include "../MyClass/camera.hpp"
+#include "../MyClass/model.hpp"
 
 using uint = unsigned int;
 // 顶点数据

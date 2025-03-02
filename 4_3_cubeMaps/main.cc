@@ -121,9 +121,16 @@ int main()
 		//enum 是依次递增的
 		GenerateTexImg(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, skyBoxTexPaths[i].c_str());// 加载并生成纹理对象
 	}
-
+	
 	wxy::ShaderProgram shaderPrgmCube("./shader/cube.vert", "./shader/cube.frag");
 	wxy::ShaderProgram shaderPrgmSkyBox("./shader/skyBox.vert", "./shader/skyBox.frag");
+
+	// 加载一个外部模型
+	//stbi_set_flip_vertically_on_load(true);
+	wxy::Model modeler(std::filesystem::absolute("../resources/objects/nanosuit_reflection/nanosuit.obj").string());
+	wxy::ShaderProgram shaderPrgmModel("./shader/model.vert", "./shader/model.frag"); //着色器
+	
+	glm::vec3 lightColor{1.f, 1.f, 1.f};
 
 	glEnable(GL_DEPTH_TEST);// 启用深度测试
 
@@ -142,10 +149,33 @@ int main()
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.GetFov()), (float)wndWidth / (float)wndHeight, 0.1f, 100.f); 
 		
+		// draw the nanosuit
+		shaderPrgmModel.Use();
+		glm::mat4 modelNanosuit = glm::translate(glm::mat4(1.f), glm::vec3(-2.f, -2.f, 0.f));
+		modelNanosuit = glm::scale(modelNanosuit, glm::vec3(0.2f));
+		modelNanosuit = glm::rotate(modelNanosuit, glm::radians(45.f), glm::vec3(0.f, 1.f, 0.f));
+		
+		shaderPrgmModel.SetUniformv("model_", 1, modelNanosuit);
+		shaderPrgmModel.SetUniformv("view_", 1, view);
+		shaderPrgmModel.SetUniformv("projection_", 1, projection);
+		shaderPrgmModel.SetUniform("cameraPos_", camera.GetPos());
+
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxTexID);
+		shaderPrgmModel.SetUniform("texerSkyBox_", 4);
+		
+		// 平行光, 光源指向物体的光
+		shaderPrgmModel.SetUniformv("direcLight_.ambientColor", 1, glm::vec3(0.2f));
+		shaderPrgmModel.SetUniformv("direcLight_.diffuseColor", 1, glm::vec3(0.5f));
+		shaderPrgmModel.SetUniformv("direcLight_.specularColor", 1, glm::vec3(0.1f));
+		glm::vec3 lightDir = glm::normalize(glm::vec3(-0.2f, -1.1f, -0.3f));
+		shaderPrgmModel.SetUniformv("direcLight_.direc", 1, lightDir);
+		modeler.Draw(shaderPrgmModel);
+
 		// draw the cube
 		shaderPrgmCube.Use();
 		glm::mat4 modelCube = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, 0.f));
-		modelCube = glm::rotate(modelCube, glm::radians(45.f), glm::vec3(0.f, 1.f, 0.f));
+		modelCube = glm::rotate(modelCube, glm::radians(45.f), glm::vec3(0.f, -1.f, 0.f));
 		shaderPrgmCube.SetUniformv("model_", 1, modelCube);
 		shaderPrgmCube.SetUniformv("view_", 1, view);
 		shaderPrgmCube.SetUniformv("projection_", 1, projection);
