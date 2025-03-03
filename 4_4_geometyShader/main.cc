@@ -45,23 +45,25 @@ int main()
 	// cube
 	GLuint VBO, VAO;
 	std::function<void(void)> VertAttrPtr = [](){
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0); // 顶点坐标	
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0); // 顶点坐标	
 		glEnableVertexAttribArray(0); // 启用location 0
+
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float))); // 顶点颜色
+		glEnableVertexAttribArray(1); // 启用location 0
 
 		glBindVertexArray(0); // 将 VAO 从 OpenGL 当前上下文解绑
 	};
+
 	SetVertices(VBO, VAO, Vertices, VertAttrPtr);
 	
 	wxy::ShaderProgram shaderPrgm("./shader/model.vert", "./shader/model.geom", "./shader/model.frag");
-
-	//glEnable(GL_DEPTH_TEST);// 启用深度测试
 
 	// 主循环
 	glfwSwapInterval(1); // 前后缓冲区交换间隔
 	while(!glfwWindowShouldClose(pWindow))
 	{
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);//设置清除颜色缓冲区后要使用的颜色-纯色
-		glClear(GL_COLOR_BUFFER_BIT); // 清楚颜色缓冲区, 深度缓冲区, 本例不需要模板缓冲
+		glClear(GL_COLOR_BUFFER_BIT); // 清楚颜色缓冲区
 
 		curTime = glfwGetTime();
 		perFrameTime = curTime - lastTime;
