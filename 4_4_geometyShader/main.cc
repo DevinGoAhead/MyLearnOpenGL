@@ -26,51 +26,44 @@ int main()
 	glfwSetCursorPosCallback(pWindow, cursor_callback);// 注册光标捕捉函数
 	glfwSetScrollCallback(pWindow, scroll_callback);// 注册滚轮捕捉函数
 	
-	// 顶点
-	// VBO VAO 只能是引用传递或指针传递
-	auto SetVertices = [](GLuint& VBO, GLuint& VAO, const std::vector<float>& Vertices, std::function<void(void)> VertAttrPtr){
-		glGenBuffers(1, &VBO); // 创建 Buffer 对象, 绑定到 ID VBO 上
-		glBindBuffer(GL_ARRAY_BUFFER, VBO); // 将 VBO 绑定在 GL_ARRAY_BUFFER 上
-
-		// 在 GPU 中开辟指定类型的缓冲区, 用于存放 vertices indeies
-		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * Vertices.size(), &Vertices[0], GL_STATIC_DRAW);
-
-		glGenVertexArrays(1, &VAO); // 创建 vertexArray, 绑定到 ID VAO 上
-		glBindVertexArray(VAO); // 绑定 VAO 到 openGL 上下文, 开始记录信息
-		VertAttrPtr();
-	};
-
-	// 顶点数据在 global.h 中
-
-	// cube
-	GLuint VBO, VAO;
-	std::function<void(void)> VertAttrPtr = [](){
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0); // 顶点坐标	
-		glEnableVertexAttribArray(0); // 启用location 0
-
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float))); // 顶点颜色
-		glEnableVertexAttribArray(1); // 启用location 0
-
-		glBindVertexArray(0); // 将 VAO 从 OpenGL 当前上下文解绑
-	};
-
-	SetVertices(VBO, VAO, Vertices, VertAttrPtr);
-	
 	wxy::ShaderProgram shaderPrgm("./shader/model.vert", "./shader/model.geom", "./shader/model.frag");
+	wxy::Model nanosuit("../resources/objects/nanosuit/nanosuit.obj");
+	
+	glm::vec3 light(1.f, 1.f, 1.f);
 
+	glm::vec3 posLight(50.f);
+
+	glEnable(GL_DEPTH);
 	// 主循环
 	glfwSwapInterval(1); // 前后缓冲区交换间隔
 	while(!glfwWindowShouldClose(pWindow))
 	{
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);//设置清除颜色缓冲区后要使用的颜色-纯色
-		glClear(GL_COLOR_BUFFER_BIT); // 清楚颜色缓冲区
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // 清楚颜色缓冲区
 
 		curTime = glfwGetTime();
 		perFrameTime = curTime - lastTime;
 		lastTime = curTime;
+
 		shaderPrgm.Use();
-		glBindVertexArray(VAO);
-		glDrawArrays(GL_POINTS, 0, 4);
+		glm::mat4 view = camera.GetViewMatrix();
+		glm::mat4 projection = glm::perspective(glm::radians(camera.GetFov()), (float)wndWidth / (float)wndHeight, 0.1f, 100.f);
+		glm::mat4 modelNanosuit =  glm::translate(glm::mat4(1.f), glm::vec3(0.f, -2.f, 0.f));
+		modelNanosuit = glm::scale(modelNanosuit, glm::vec3(0.5f));
+		modelNanosuit = glm::rotate(modelNanosuit, glm::radians(5.f), glm::vec3(0.f, -1.f, 0.f));
+
+		shaderPrgm.SetUniformv("model_", 1, modelNanosuit);
+		shaderPrgm.SetUniformv("view_", 1, view);
+		shaderPrgm.SetUniformv("projection_", 1, projection);
+		shaderPrgm.SetUniform("time_", curTime);
+
+		// light
+		shaderPrgm.SetUniformv("light_.ambient", 1, glm::vec3(1.f));
+		shaderPrgm.SetUniformv("light_.diffuse", 1, glm::vec3(1.f));
+		shaderPrgm.SetUniformv("light_.specular", 1, glm::vec3(1.f));
+		shaderPrgm.SetUniformv("cameraPos", 1, camera.GetPos());
+
+		nanosuit.Draw(shaderPrgm);
 		
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区
 		glfwPollEvents(); // 轮询 - glfw 与 窗口通信

@@ -17,18 +17,11 @@
 #include "../MyClass/model.hpp"
 
 using uint = unsigned int;
-// 顶点数据, 这里每个点表示一个小房子的中心点(基准点), 基于这4个点将创建4个小房子
-std::vector<float> Vertices = {
-	-0.5f, 0.5f, 1.0f, 0.0f, 0.0f, // 左上
-	0.5f, 0.5f, 0.0f, 1.0f, 0.0f, // 右上
-	0.5f, -0.5f, 0.0f, 0.0f, 1.0f, // 右下
-	-0.5f, -0.5f, 1.0f, 1.0f, 0.0f // 左下
-};
 
 // window
 int wndWidth, wndHeight;
 
-wxy::Camera camera({0.f, 1.f, 3.f});//camera, pos (0, 0, 3)
+wxy::Camera camera({0.f, 2.f, 10.f});//camera, pos
 
 // time
 float curTime = 0.f, lastTime = 0.f, perFrameTime = 0.f;
