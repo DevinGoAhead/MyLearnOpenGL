@@ -45,8 +45,9 @@ namespace wxy {
 	//private
 	void Model::LoadModel(const std::string& pathName) {
 		Assimp::Importer import;
+		// 将非三角形处理为三角形 | 反转纹理图像的 y 坐标 | 强制统一为 CCW 顺序
 		const aiScene *assimpScene = import.ReadFile(pathName, 
-				aiProcess_Triangulate | aiProcess_FlipUVs); // 将非三角形处理为三角形 | 反转纹理图像的 y 坐标
+				aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_FlipWindingOrder); 
 		// 只要有一个为假即判断为失败
 		if(!assimpScene || (assimpScene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !assimpScene->mRootNode)) {
 			std::cerr << "ASSIMP::ERROR::" << import.GetErrorString() << std::endl;
