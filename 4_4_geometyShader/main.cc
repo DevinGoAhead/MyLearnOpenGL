@@ -26,14 +26,17 @@ int main()
 	glfwSetCursorPosCallback(pWindow, cursor_callback);// 注册光标捕捉函数
 	glfwSetScrollCallback(pWindow, scroll_callback);// 注册滚轮捕捉函数
 	
-	wxy::ShaderProgram shaderPrgm("./shader/model.vert", "./shader/model.geom", "./shader/model.frag");
-	wxy::Model nanosuit("../resources/objects/nanosuit/nanosuit.obj");
+	wxy::ShaderProgram shaderPrgm("./shader/model.vert", "", "./shader/model.frag");
+	stbi_set_flip_vertically_on_load(true);
+	wxy::Model nanosuit("../resources/objects/nanosuit_reflection/nanosuit.obj");
+
+	wxy::ShaderProgram shaderPrgmNorDspy("./shader/normalDisplay.vert", "./shader/normalDisplay.geom", "./shader/normalDisplay.frag");
 	
 	glm::vec3 light(1.f, 1.f, 1.f);
 
-	glm::vec3 posLight(50.f);
+	glm::vec3 posLight(glm::vec3(5.f));
 
-	glEnable(GL_DEPTH);
+	glEnable(GL_DEPTH_TEST);
 	// 主循环
 	glfwSwapInterval(1); // 前后缓冲区交换间隔
 	while(!glfwWindowShouldClose(pWindow))
@@ -44,26 +47,37 @@ int main()
 		curTime = glfwGetTime();
 		perFrameTime = curTime - lastTime;
 		lastTime = curTime;
-
-		shaderPrgm.Use();
+		
+		//视图和投影变换
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.GetFov()), (float)wndWidth / (float)wndHeight, 0.1f, 100.f);
+
+		// 模型
+		shaderPrgm.Use();
+		
 		glm::mat4 modelNanosuit =  glm::translate(glm::mat4(1.f), glm::vec3(0.f, -2.f, 0.f));
 		modelNanosuit = glm::scale(modelNanosuit, glm::vec3(0.5f));
-		modelNanosuit = glm::rotate(modelNanosuit, glm::radians(5.f), glm::vec3(0.f, -1.f, 0.f));
+		modelNanosuit = glm::rotate(modelNanosuit, glm::radians(45.f), glm::vec3(0.f, 1.f, 0.f));
 
 		shaderPrgm.SetUniformv("model_", 1, modelNanosuit);
 		shaderPrgm.SetUniformv("view_", 1, view);
 		shaderPrgm.SetUniformv("projection_", 1, projection);
-		shaderPrgm.SetUniform("time_", curTime);
 
 		// light
-		shaderPrgm.SetUniformv("light_.ambient", 1, glm::vec3(1.f));
-		shaderPrgm.SetUniformv("light_.diffuse", 1, glm::vec3(1.f));
-		shaderPrgm.SetUniformv("light_.specular", 1, glm::vec3(1.f));
-		shaderPrgm.SetUniformv("cameraPos", 1, camera.GetPos());
+		shaderPrgm.SetUniformv("light_.ambient", 1, glm::vec3(0.2f));
+		shaderPrgm.SetUniformv("light_.diffuse", 1, glm::vec3(0.6f));
+		shaderPrgm.SetUniformv("light_.specular", 1, glm::vec3(0.8f));
+		shaderPrgm.SetUniformv("light_.pos", 1, posLight);
+		shaderPrgm.SetUniformv("cameraPos_", 1, camera.GetPos());
 
 		nanosuit.Draw(shaderPrgm);
+
+		// 法线可视化
+		shaderPrgmNorDspy.Use();
+		shaderPrgmNorDspy.SetUniformv("model_", 1, modelNanosuit);
+		shaderPrgmNorDspy.SetUniformv("view_", 1, view);
+		shaderPrgmNorDspy.SetUniformv("projection_", 1, projection);
+		nanosuit.Draw(shaderPrgmNorDspy);
 		
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区
 		glfwPollEvents(); // 轮询 - glfw 与 窗口通信

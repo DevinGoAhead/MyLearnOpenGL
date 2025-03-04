@@ -21,7 +21,7 @@ using uint = unsigned int;
 // window
 int wndWidth, wndHeight;
 
-wxy::Camera camera({0.f, 2.f, 10.f});//camera, pos
+wxy::Camera camera({0.f, 5.f, 10.f});//camera, pos
 
 // time
 float curTime = 0.f, lastTime = 0.f, perFrameTime = 0.f;
