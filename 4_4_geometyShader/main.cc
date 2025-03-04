@@ -31,9 +31,9 @@ int main()
 	
 	glm::vec3 light(1.f, 1.f, 1.f);
 
-	glm::vec3 posLight(50.f);
+	glm::vec3 posLight(glm::vec3(5.f));
 
-	glEnable(GL_DEPTH);
+	glEnable(GL_DEPTH_TEST);
 	// 主循环
 	glfwSwapInterval(1); // 前后缓冲区交换间隔
 	while(!glfwWindowShouldClose(pWindow))
@@ -50,7 +50,7 @@ int main()
 		glm::mat4 projection = glm::perspective(glm::radians(camera.GetFov()), (float)wndWidth / (float)wndHeight, 0.1f, 100.f);
 		glm::mat4 modelNanosuit =  glm::translate(glm::mat4(1.f), glm::vec3(0.f, -2.f, 0.f));
 		modelNanosuit = glm::scale(modelNanosuit, glm::vec3(0.5f));
-		modelNanosuit = glm::rotate(modelNanosuit, glm::radians(5.f), glm::vec3(0.f, -1.f, 0.f));
+		modelNanosuit = glm::rotate(modelNanosuit, glm::radians(45.f), glm::vec3(0.f, 1.f, 0.f));
 
 		shaderPrgm.SetUniformv("model_", 1, modelNanosuit);
 		shaderPrgm.SetUniformv("view_", 1, view);
@@ -58,10 +58,11 @@ int main()
 		shaderPrgm.SetUniform("time_", curTime);
 
 		// light
-		shaderPrgm.SetUniformv("light_.ambient", 1, glm::vec3(1.f));
+		shaderPrgm.SetUniformv("light_.ambient", 1, glm::vec3(0.1f));
 		shaderPrgm.SetUniformv("light_.diffuse", 1, glm::vec3(1.f));
-		shaderPrgm.SetUniformv("light_.specular", 1, glm::vec3(1.f));
-		shaderPrgm.SetUniformv("cameraPos", 1, camera.GetPos());
+		shaderPrgm.SetUniformv("light_.specular", 1, glm::vec3(0.8f));
+		shaderPrgm.SetUniformv("light_.pos", 1, glm::vec3(1.f));
+		shaderPrgm.SetUniformv("cameraPos_", 1, camera.GetPos());
 
 		nanosuit.Draw(shaderPrgm);
 		
