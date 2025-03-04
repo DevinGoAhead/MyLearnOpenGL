@@ -30,7 +30,9 @@ namespace wxy{
 		template<typename T, typename... Args>
 		void SetUniform(const std::string& uniformName, T value, Args... args);
 		template<typename T>
-		void SetUniformv(const std::string& uniformName, GLsizei count, T value, GLboolean transpose = GL_FALSE);
+		void SetUniformv(const std::string& uniformName, GLsizei count, const T* value, GLboolean transpose = GL_FALSE);
+		template<typename T>
+		void SetUniformv(const std::string& uniformName, const T& value, GLboolean transpose = GL_FALSE);
 		GLuint ID() {return _shaderProgram;}
 	private:
 		void FileToString(const std::string& FilePath, std::string& strDestination);// 将文件内容 "拷贝" 至字符串
@@ -109,7 +111,11 @@ namespace wxy{
 
 	template<typename T, typename... Args>
 	void ShaderProgram::SetUniform(const std::string& uniformName, T value, Args... args) {
-		GLuint uniformLocation = glGetUniformLocation(_shaderProgram, uniformName.c_str());
+		GLint uniformLocation = glGetUniformLocation(_shaderProgram, uniformName.c_str());
+		if (uniformLocation == -1) {
+			std::cerr << "ERROR::SetUniform: Not found in shader!" << std::endl;
+			exit (1);
+		}
 		// 这里至少要求有一个uniform分量不在参数包中,而去对应 T, 用于确定 uniform 的值得类型
 		if constexpr (std::is_same_v<T, GLuint>) {
 			if constexpr (sizeof...(args) == 0){glUniform1ui(uniformLocation, value, args...);}
@@ -132,10 +138,20 @@ namespace wxy{
 	}
 
 	template<typename T>
-	void ShaderProgram::SetUniformv(const std::string& uniformName, GLsizei count, T value, GLboolean transpose) {
-		GLuint uniformLocation = glGetUniformLocation(_shaderProgram, uniformName.c_str());
-		if constexpr (std::is_same_v<T, glm::vec<3, float>>){glUniform3fv(uniformLocation, count, glm::value_ptr(value));}
-		if constexpr (std::is_same_v<T, glm::mat4>){glUniformMatrix4fv(uniformLocation, count, transpose, glm::value_ptr(value));}
+	void ShaderProgram::SetUniformv(const std::string& uniformName, GLsizei count, const T* value, GLboolean transpose) {
+		GLint uniformLocation = glGetUniformLocation(_shaderProgram, uniformName.c_str());
+		if (uniformLocation == -1) {
+			std::cerr << "ERROR::SetUniform: not found in shader!" << std::endl;
+			exit (1);
+		}
+		if constexpr (std::is_same_v<T, glm::vec<2, float>>){glUniform2fv(uniformLocation, count, glm::value_ptr(value[0]));}
+		else if constexpr (std::is_same_v<T, glm::vec<3, float>>){glUniform3fv(uniformLocation, count, glm::value_ptr(value[0]));}
+		else if constexpr (std::is_same_v<T, glm::mat4>){glUniformMatrix4fv(uniformLocation, count, transpose, glm::value_ptr(value[0]));}
+	}
+
+	template<typename T>
+	void ShaderProgram::SetUniformv(const std::string& uniformName, const T& value, GLboolean transpose) {
+		SetUniformv(uniformName, 1, &value, transpose);
 	}
 	void ShaderProgram::FileToString(const std::string& FilePath, std::string& strDestination) {
 		#ifdef DEBUG
