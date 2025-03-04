@@ -74,7 +74,7 @@ namespace wxy{
 		
 		//几何着色器
 		GLuint geomShader;
-		if(!vertShaderFilePath.empty()) {
+		if(!geomShaderFilePath.empty()) {
 			std::string geomShaderCode;
 			FileToString(geomShaderFilePath, geomShaderCode);
 			geomShader = glCreateShader(GL_GEOMETRY_SHADER); // 创建顶点着色器
