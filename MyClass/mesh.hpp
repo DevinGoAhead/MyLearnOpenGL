@@ -73,9 +73,9 @@ namespace wxy{
 			if(texTypeName == "textureDiffuse") {number = std::to_string(textureDiffuseNr++);}
 			else if(texTypeName == "textureSpecular") {number = std::to_string(textureSpecularNr++);}
 			else if(texTypeName == "textureReflection") {number = std::to_string(textureReflectionNr++);}
-			shaderProgram.SetUniform(("material_." + texTypeName + number).c_str(), i); // 将纹理单元的索引传递给 GPU 中对应的 Sampler 对象
+			shaderProgram.SetUniform(("uMaterial." + texTypeName + number).c_str(), i); // 将纹理单元的索引传递给 GPU 中对应的 Sampler 对象
 		}
-		shaderProgram.SetUniform("material_.shininess",64); // 这里暂先硬编码, 有需要再优化
+		//shaderProgram.SetUniform("material_.shininess",64); // 这里暂先硬编码, 有需要再优化
 		glActiveTexture(GL_TEXTURE0); // 激活状态恢复到纹理单元 0
 
 		// draw
