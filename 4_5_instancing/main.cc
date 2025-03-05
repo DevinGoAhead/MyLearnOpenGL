@@ -30,37 +30,72 @@ int main()
 	wxy::Model planet("../resources/objects/planet/planet.obj");// 行星
 	wxy::Model asteroid("../resources/objects/rock/rock.obj"); // 小行星带
 	
-	wxy::ShaderProgram SdPmPlanet("./shader/planet.vert", "./shader/planet.frag");
-	wxy::ShaderProgram SdPmAsteroid("./shader/asteroid.vert", "./shader/planet.frag");
+	wxy::ShaderProgram SdPmPlanet("./shader/planet.vert", "./shader/model.frag");
+	wxy::ShaderProgram SdPmAsteroid("./shader/asteroid.vert", "./shader/model.frag");
 	GetError();
 
 	// 小行星参数
-	uint amount = 1000; // 数量
+	uint amount = 100000; // 数量
 
-	float radius = 10; // 分布半径
+	float radius = 30; // 分布半径
 	std::random_device rd; // 随机数生成器, 用于生成一个随机数种子
 	std::mt19937 gen(rd()); // 这是实际生成随机数的引擎
-	std::vector<glm::mat4> modelAsteroids;
-	modelAsteroids.reserve(amount);
+	std::vector<glm::mat4> asteroidModels;
+	asteroidModels.reserve(amount);
 	// 小行星带分布在半径为radius 的圆上, 但是位置会在圆周的的周围做微小的随即波动
 	for(uint i = 0; i < amount; ++i) {
 		float angle = (float)i / amount * 360; // 确保小行星均匀分布
 		// 位置
-		std::uniform_real_distribution<float> distrPos(-2.5f, 2.5f); // 位置波动范围
+		std::uniform_real_distribution<float> distrPos(-15.f, 2.5f); // 位置波动范围
 		float x = sin(angle) * radius + distrPos(gen);
 		float z = cos(angle) * radius + distrPos(gen);
-		float y = distrPos(gen) * 0.5f;
-		glm::mat modelAsteroid = glm::translate(glm::mat4(1.f), glm::vec3(x, y, z));
+		float y = distrPos(gen) * 0.4f;
+		glm::mat asteroidModel = glm::translate(glm::mat4(1.f), glm::vec3(x, y, z));
 
 		// 缩放
 		std::uniform_real_distribution<float> distrScale(0.05f, 0.25f); // 缩放波动范围
-		modelAsteroid = glm::scale(modelAsteroid, glm::vec3(distrScale(gen)));
+		asteroidModel = glm::scale(asteroidModel, glm::vec3(distrScale(gen)));
 
 		// 旋转
 		std::uniform_real_distribution<float> distrRotate(0.f, 360.f); // 旋转波动范围
-		modelAsteroid = glm::rotate(modelAsteroid, distrRotate(gen), glm::vec3(0.2f, 0.5f, 0.8f));
-		modelAsteroids.push_back(modelAsteroid);
+		asteroidModel = glm::rotate(asteroidModel, distrRotate(gen), glm::vec3(0.2f, 0.5f, 0.8f));
+		asteroidModels.push_back(asteroidModel);
 	}
+	GetError();
+	// 配置asteroidModels 缓冲
+	uint asteroidModelsVBO;
+	glGenBuffers(1, &asteroidModelsVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, asteroidModelsVBO);
+	// 一次性将所有模型变换矩阵数据发送给GPU
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * asteroidModels.size(), &asteroidModels[0], GL_STATIC_DRAW);
+	GetError();
+	// 因为 目前的条件是所有的数据分布在许多 mesh 中, 每个 mesh 是单独 draw 的, 每个 mesh 都有自己的 VAO
+	// 所以 虽然这里的 VAO 配置都相同, 但还是需要配置 N 次(为每个 mesh 重复配置)
+	// 解决思路就是将分布在所有mesh中的数据集中到一起, 但是这样改动的代码太多了
+	// 然而, 懒...
+	auto& meshes = asteroid._meshes;
+	for(const auto& mesh : meshes) {
+		glBindVertexArray(mesh._VAO);
+		// 0 1 2 被 pos normal texcoord 使用
+		uint vec4Size = sizeof(glm::vec4);
+		glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, 0); // mat4 第 1 列
+		glEnableVertexAttribArray(3);
+		glVertexAttribDivisor(3, 1);
+
+		glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(vec4Size)); // mat4 第 2 列
+		glEnableVertexAttribArray(4);
+		glVertexAttribDivisor(4, 1);
+
+		glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(2 * vec4Size)); // mat4 第 3 列
+		glEnableVertexAttribArray(5);
+		glVertexAttribDivisor(5, 1);
+
+		glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(3 * vec4Size)); // mat4 第 4 列
+		glEnableVertexAttribArray(6);
+		glVertexAttribDivisor(6, 1);
+		glBindVertexArray(0);
+	}
+	GetError();
 
 	glm::vec3 lightPos = glm::vec3(20.f, 20.f, 0.f);
 	// 主循环
@@ -120,11 +155,10 @@ int main()
 		//GetError();
 
 		// 小行星带分布在半径为radius 的圆上, 但是位置会在圆周的的周围做微小的随即波动
-		for(uint i = 0; i < amount; ++i) {
-			SdPmAsteroid.SetUniformv("uModel", modelAsteroids[i]);
-			asteroid.Draw(SdPmAsteroid);
+		for(const auto& mesh : meshes) {
+			glBindVertexArray(mesh._VAO);
+			glDrawElementsInstanced(GL_TRIANGLES, mesh._indices.size(), GL_UNSIGNED_INT, 0, amount);
 		}
-		//glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 100); // 绘制 100 个实例
 		
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区
 		glfwPollEvents(); // 轮询 - glfw 与 窗口通信

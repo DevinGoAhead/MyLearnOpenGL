@@ -39,7 +39,7 @@ namespace wxy{
 		void Draw(ShaderProgram shaderProgram);
 	private:
 		void SetupMesh();
-	private:
+	public:
 		std::vector<Vertex> _vertices; // 实际的顶点数据
 		std::vector<uint> _indices; // 顶点索引
 		std::vector<Texture> _textures; // 纹理
