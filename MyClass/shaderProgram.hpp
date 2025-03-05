@@ -21,8 +21,9 @@ namespace wxy{
 	class ShaderProgram
 	{
 	public:
-		ShaderProgram(const std::string& vertShaderFilePath = "", 
-			const std::string& geomShaderFilePath = "", const std::string& fragShaderFilePath = "");
+		ShaderProgram(const std::string& vertShaderFilePath, 
+			const std::string& geomShaderFilePath, const std::string& fragShaderFilePath);
+		ShaderProgram(const std::string& vertShaderFilePath, const std::string& fragShaderFilePath);
 		void Use();//激活 shader program
 		
 		// 设定 uniform 变量的值(可变参数模板)
@@ -41,16 +42,11 @@ namespace wxy{
 	private:
 		GLuint _shaderProgram;
 	};
-
+	ShaderProgram::ShaderProgram(const std::string& vertShaderFilePath, const std::string& fragShaderFilePath) 
+		: ShaderProgram(vertShaderFilePath, "", fragShaderFilePath){}//委托构造
 	ShaderProgram::ShaderProgram(const std::string& vertShaderFilePath, 
 		const std::string& geomShaderFilePath, const std::string& fragShaderFilePath) {
 		// 顶点着色器, 片段着色器
-		try {
-			if(vertShaderFilePath.empty()) { throw std::runtime_error("VertShader is empty");}
-			if(fragShaderFilePath.empty()) { throw std::runtime_error("FragShader is empty");}
-		}
-		catch (const std::exception& e){ std::cerr << "ERROR::SHADER:: " << e.what() << std::endl;}
-
 		std::string vertShaderCode; // 字符串用于存储着色器源码
 		FileToString(vertShaderFilePath, vertShaderCode);
 
@@ -75,7 +71,7 @@ namespace wxy{
 		isCompileSuccess(fragShader);
 		
 		//几何着色器
-		GLuint geomShader;
+		GLuint geomShader = 0; // 需要初始化
 		if(!geomShaderFilePath.empty()) {
 			std::string geomShaderCode;
 			FileToString(geomShaderFilePath, geomShaderCode);
@@ -93,10 +89,13 @@ namespace wxy{
 		_shaderProgram = glCreateProgram();
 		glAttachShader(_shaderProgram, vertShader);
 		glAttachShader(_shaderProgram, fragShader);
-		if(!vertShaderFilePath.empty()) { glAttachShader(_shaderProgram, geomShader);}
-
+		if(!geomShaderFilePath.empty()) { glAttachShader(_shaderProgram, geomShader); }
 		glLinkProgram(_shaderProgram);// 链接
 		isLinkSuccess(_shaderProgram);
+		// 删除着色器对象
+		glDeleteShader(vertShader);
+		glDeleteShader(fragShader);
+		if (geomShader != 0) { glDeleteShader(geomShader); }
 
 		#ifdef DEBUG
 		std::cout << "vertShaderCode: " << vertShaderCode<<std::endl;
@@ -112,10 +111,11 @@ namespace wxy{
 	template<typename T, typename... Args>
 	void ShaderProgram::SetUniform(const std::string& uniformName, T value, Args... args) {
 		GLint uniformLocation = glGetUniformLocation(_shaderProgram, uniformName.c_str());
-		if (uniformLocation == -1) {
-			std::cerr << "ERROR::SetUniform: Not found in shader!" << std::endl;
-			exit (1);
-		}
+		// 导入的模型中, 同一种纹理可能有多个, 导致纹理后缀大于0, 报错, 暂时不考虑多个, 暂关闭该检错机制
+		// if (uniformLocation == -1) {
+		// 	std::cerr << "ERROR::SetUniform: Not found in shader!" << std::endl;
+		// 	exit (1);
+		// }
 		// 这里至少要求有一个uniform分量不在参数包中,而去对应 T, 用于确定 uniform 的值得类型
 		if constexpr (std::is_same_v<T, GLuint>) {
 			if constexpr (sizeof...(args) == 0){glUniform1ui(uniformLocation, value, args...);}
@@ -140,10 +140,10 @@ namespace wxy{
 	template<typename T>
 	void ShaderProgram::SetUniformv(const std::string& uniformName, GLsizei count, const T* value, GLboolean transpose) {
 		GLint uniformLocation = glGetUniformLocation(_shaderProgram, uniformName.c_str());
-		if (uniformLocation == -1) {
-			std::cerr << "ERROR::SetUniform: not found in shader!" << std::endl;
-			exit (1);
-		}
+		// if (uniformLocation == -1) {
+		// 	std::cerr << "ERROR::SetUniform: not found in shader!" << std::endl;
+		// 	exit (1);
+		// }
 		if constexpr (std::is_same_v<T, glm::vec<2, float>>){glUniform2fv(uniformLocation, count, glm::value_ptr(value[0]));}
 		else if constexpr (std::is_same_v<T, glm::vec<3, float>>){glUniform3fv(uniformLocation, count, glm::value_ptr(value[0]));}
 		else if constexpr (std::is_same_v<T, glm::mat4>){glUniformMatrix4fv(uniformLocation, count, transpose, glm::value_ptr(value[0]));}
