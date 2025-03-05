@@ -25,7 +25,7 @@ namespace wxy {
 		Mesh ProcessMesh(aiMesh* assimpMesh, const aiScene* assimpScene);
 		std::vector<Texture> loadMaterialTextures(aiMaterial* assimpMat, aiTextureType assimpTexType, const std::string& texTypeName);
 		uint TextureFromFile(const std::string& assimpTexFileName/*, const std::string& texTypeName*/);
-	private:
+	public:
 		std::vector<Mesh> _meshes; // 存放加载的所有mesh
 		std::map<std::string, Texture> _texturesLoaded; // 已经加载过的模型
 		std::string _directory; // 不含文件名的模型文件的路径
