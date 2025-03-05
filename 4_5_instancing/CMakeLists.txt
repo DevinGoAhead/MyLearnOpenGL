@@ -12,7 +12,7 @@ include_directories(${packagesDir}/include)
 include_directories(${myClassDir}) #自定义类
 
 # 编译
-add_compile_options(-Wall -std=c++17)
+add_compile_options(-Wall -std=c++20)
 add_executable(instance global.h main.cc)# 生成可执行文件
 
 # 指明编译阶段库文件

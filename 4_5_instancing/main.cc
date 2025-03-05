@@ -28,34 +28,26 @@ int main()
 
 	// 顶点
 	// VBO VAO 只能是引用传递或指针传递
-	auto SetVertices = [](GLuint& VBO, GLuint& VAO, const std::vector<float>& Vertices, std::function<void(void)> VertAttrPtr){
+	auto SetVBO = []<typename T>(GLuint& VBO, const std::vector<T>& Vertices){
 		glGenBuffers(1, &VBO); // 创建 Buffer 对象, 绑定到 ID VBO 上
 		glBindBuffer(GL_ARRAY_BUFFER, VBO); // 将 VBO 绑定在 GL_ARRAY_BUFFER 上
 
 		// 在 GPU 中开辟指定类型的缓冲区, 用于存放 vertices indeies
-		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * Vertices.size(), &Vertices[0], GL_STATIC_DRAW);
-
-		glGenVertexArrays(1, &VAO); // 创建 vertexArray, 绑定到 ID VAO 上
-		glBindVertexArray(VAO); // 绑定 VAO 到 openGL 上下文, 开始记录信息
-
-			VertAttrPtr();
+		glBufferData(GL_ARRAY_BUFFER, sizeof(T) * Vertices.size(), &Vertices[0], GL_STATIC_DRAW);
 	};
-
-	wxy::ShaderProgram shaderPrgm("./shader/model.vert", "", "./shader/model.frag");
-	shaderPrgm.Use();
 	
 	// 顶点数据在 global.h 中
-	GLuint quadVBO, quadVAO;
-	std::function<void(void)> QuadVertAttrPtr = [](){
-			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0); // 顶点坐标
-			glEnableVertexAttribArray(0); // 启用location 0
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float))); // 颜色
-			glEnableVertexAttribArray(1); // 启用location 1
+	GLuint quadVBO, VAO;
+	SetVBO(quadVBO, quadVertices);
 
-			glBindVertexArray(0); // 将 VAO 从 OpenGL 当前上下文解绑
-	};
-	SetVertices(quadVBO, quadVAO, quadVertices, QuadVertAttrPtr);
+	glGenVertexArrays(1, &VAO); // 创建 vertexArray, 绑定到 ID VAO 上
+	glBindVertexArray(VAO); // 绑定 VAO 到 openGL 上下文, 开始记录信息
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0); // 顶点坐标
+	glEnableVertexAttribArray(0); // 启用location 0
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float))); // 颜色
+	glEnableVertexAttribArray(1); // 启用location 1
 
+	GLuint offsetVBO;
 	std::vector<glm::vec2> offsetVertices(100);
 	for(uint y = 0; y < 10; ++y) {
 		for(uint x = 0; x < 10; ++x) {
@@ -63,12 +55,21 @@ int main()
 			//shaderPrgm.SetUniformv("uOffsets[" + std::to_string(index) + "]", offsetVertices[index]); //添加到 uniform 变量
 		}
 	}
-	shaderPrgm.SetUniformv("uOffsets", 100, offsetVertices.data()); //批量设置
+	SetVBO(offsetVBO, offsetVertices);
+	
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0); // 偏移
+	glEnableVertexAttribArray(2); // 启用location 2
+	glVertexAttribDivisor(2, 1); // location 索引, 更新策略(这里是每draw 一个实例更新一次)
+	glBindVertexArray(0);
+	
 	GLenum err = glGetError();
 	if (err != GL_NO_ERROR) {
-	    std::cerr << "OpenGL Error: " << err << std::endl;
+		std::cerr << "OpenGL Error: " << err << std::endl;
 	}
 
+	wxy::ShaderProgram shaderPrgm("./shader/model.vert", "", "./shader/model.frag");
+	shaderPrgm.Use();
+	
 	// 主循环
 	glfwSwapInterval(1); // 前后缓冲区交换间隔
 	while(!glfwWindowShouldClose(pWindow))
@@ -81,7 +82,7 @@ int main()
 		lastTime = curTime;
 
 		shaderPrgm.Use();
-		glBindVertexArray(quadVAO);
+		glBindVertexArray(VAO);
 		glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 100); // 绘制 100 个实例
 		
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区
