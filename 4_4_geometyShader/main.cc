@@ -59,24 +59,25 @@ int main()
 		modelNanosuit = glm::scale(modelNanosuit, glm::vec3(0.5f));
 		modelNanosuit = glm::rotate(modelNanosuit, glm::radians(45.f), glm::vec3(0.f, 1.f, 0.f));
 
-		shaderPrgm.SetUniformv("model_", 1, modelNanosuit);
-		shaderPrgm.SetUniformv("view_", 1, view);
-		shaderPrgm.SetUniformv("projection_", 1, projection);
+		shaderPrgm.SetUniformv("model_", modelNanosuit);
+		shaderPrgm.SetUniformv("view_", view);
+		shaderPrgm.SetUniformv("projection_", projection);
 
 		// light
-		shaderPrgm.SetUniformv("light_.ambient", 1, glm::vec3(0.2f));
-		shaderPrgm.SetUniformv("light_.diffuse", 1, glm::vec3(0.6f));
-		shaderPrgm.SetUniformv("light_.specular", 1, glm::vec3(0.8f));
-		shaderPrgm.SetUniformv("light_.pos", 1, posLight);
-		shaderPrgm.SetUniformv("cameraPos_", 1, camera.GetPos());
+		shaderPrgm.SetUniformv("light_.ambient", glm::vec3(0.2f));
+		shaderPrgm.SetUniformv("light_.diffuse", glm::vec3(0.6f));
+		shaderPrgm.SetUniformv("light_.specular", glm::vec3(0.8f));
+		shaderPrgm.SetUniformv("light_.pos", posLight);
+		shaderPrgm.SetUniformv("cameraPos_", camera.GetPos());
+		shaderPrgm.SetUniform("uMaterial.shininess", 64);
 
 		nanosuit.Draw(shaderPrgm);
 
 		// 法线可视化
 		shaderPrgmNorDspy.Use();
-		shaderPrgmNorDspy.SetUniformv("model_", 1, modelNanosuit);
-		shaderPrgmNorDspy.SetUniformv("view_", 1, view);
-		shaderPrgmNorDspy.SetUniformv("projection_", 1, projection);
+		shaderPrgmNorDspy.SetUniformv("model_", modelNanosuit);
+		shaderPrgmNorDspy.SetUniformv("view_", view);
+		shaderPrgmNorDspy.SetUniformv("projection_", projection);
 		nanosuit.Draw(shaderPrgmNorDspy);
 		
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区

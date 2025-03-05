@@ -3,6 +3,7 @@
 struct Material{
 	sampler2D textureDiffuse0;
 	sampler2D textureSpecular0;
+	sampler2D textureReflection0;
 	int shininess;
 };
 
@@ -13,7 +14,7 @@ struct Light{
 	vec3 pos;
 };
 
-uniform Material material_;
+uniform Material uMaterial;
 uniform Light light_;
 uniform vec3 cameraPos_;
 
@@ -29,13 +30,13 @@ void main(){
 	vec3 point2camera = normalize(cameraPos_ - _position_);
 	vec3 refelctLight = reflect(-point2light, normal);
 
-	vec3 ambientColor = vec3(texture(material_.textureDiffuse0, _texCoords_)) * light_.ambient;
+	vec3 ambientColor = vec3(texture(uMaterial.textureDiffuse0, _texCoords_)) * light_.ambient;
 	
 	float diff = max(dot(point2light, normal), 0.f);
-	vec3 diffuseColor = vec3(texture(material_.textureDiffuse0, _texCoords_)) * light_.diffuse * diff;
+	vec3 diffuseColor = vec3(texture(uMaterial.textureDiffuse0, _texCoords_)) * light_.diffuse * diff;
 
-	float spec = pow(max(dot(point2camera, refelctLight), 0.f), material_.shininess);
-	vec3 specularColor = vec3(texture(material_.textureSpecular0, _texCoords_)) * light_.specular * spec;
+	float spec = pow(max(dot(point2camera, refelctLight), 0.f), uMaterial.shininess);
+	vec3 specularColor = vec3(texture(uMaterial.textureSpecular0, _texCoords_)) * light_.specular * spec;
 
 	_fragColor_ = vec4(ambientColor + diffuseColor + specularColor, 1.f);
 
