@@ -7,11 +7,13 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include <vector>
-#include <map>
-#include <functional>
-#include <string>
+#include <random>
 #include "../MyClass/shaderProgram.hpp"
 #include "../MyClass/camera.hpp"
+#include "../MyClass/model.hpp"
+
+#define GLM_ENABLE_EXPERIMENTAL // 必须定义在包含GLM头文件之前
+#include <glm/gtx/string_cast.hpp> // 包含字符串转换功能
 
 std::vector<float> quadVertices = {
 	// 位置 // 颜色
@@ -28,7 +30,7 @@ using uint = unsigned int;
 // window
 int wndWidth, wndHeight;
 
-wxy::Camera camera({0.f, 2.f, 10.f});//camera, pos
+wxy::Camera camera({-2.f, 5.f, 20.f});//camera, pos
 
 // time
 float curTime = 0.f, lastTime = 0.f, perFrameTime = 0.f;
@@ -96,4 +98,19 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
 	// 通常滚轮向下是一个放大的操作, 而滚轮向下会导致一个 > 0 的 yoffset, 这与我们预期一致
 	camera.ProcessMouseScroll(xoffset,  yoffset);
 }
+
+// 生成一个随机数
+float Random(float start, float end) {
+	std::random_device rd; // 随机数生成器, 用于生成一个随机数种子
+	std::mt19937 gen(rd()); // 这是实际生成随机数的引擎
+	std::uniform_real_distribution<float> distriute(start, end);
+	return distriute(gen);
+}
+void GetError() {
+	GLenum err = glGetError();
+	if (err != GL_NO_ERROR) {
+		std::cerr << "OpenGL Error: " << err << std::endl;
+	}
+}
+
 #endif
