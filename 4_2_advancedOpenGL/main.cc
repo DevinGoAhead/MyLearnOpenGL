@@ -144,9 +144,9 @@ int main()
 	// 创建渲染缓冲, 用于模板缓冲和深度缓冲
 	uint rendBufObj;
 	glGenRenderbuffers(1, &rendBufObj); // 创建渲染缓冲, 绑定 rendBufObj
-	glBindRenderbuffer(GL_FRAMEBUFFER, rendBufObj); // 绑定到目标GL_FRAMEBUFFER, 目前阶段, 仅 GL_FRAMEBUFFER 一个类型
+	glBindRenderbuffer(GL_RENDERBUFFER, rendBufObj); // 绑定到目标GL_RENDERBUFFER, 目前阶段, 仅GL_RENDERBUFFER 一个类型
 	// 8位用作模板缓冲, 24位用作颜色缓冲, 同时确定缓冲区尺寸(大小)
-	glRenderbufferStorage(GL_FRAMEBUFFER, GL_DEPTH24_STENCIL8,framWidth, framHeight);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,framWidth, framHeight);
 	
 	//参数含义与 glFramebufferTexture2D 类似
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rendBufObj);
@@ -180,8 +180,8 @@ int main()
 		// 视图变换矩阵和投影变换矩阵是所有对象共用
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 project = glm::perspective(glm::radians(camera.GetFov()), (float)wndWidth / (float)wndHeight, 0.1f, 100.f); 
-		shaderPrgmScene.SetUniformv("view_", 1, view);
-		shaderPrgmScene.SetUniformv("project_", 1, project);
+		shaderPrgmScene.SetUniformv("view_", view);
+		shaderPrgmScene.SetUniformv("project_", project);
 		
 		// draw plane
 		// texture
@@ -190,7 +190,7 @@ int main()
 		shaderPrgmScene.SetUniform("texturer0_",1);
 
 		glBindVertexArray(planeVAO);
-		shaderPrgmScene.SetUniformv("model_", 1, glm::mat4(1.f)); // 模型矩阵
+		shaderPrgmScene.SetUniformv("model_", glm::mat4(1.f)); // 模型矩阵
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		// draw cube
@@ -202,7 +202,7 @@ int main()
 		glBindVertexArray(cubeVAO);
 		for(const auto& position : cubePositions) {
 			glm::mat4 cubeModel = glm::translate(glm::mat4(1.f), position);
-			shaderPrgmScene.SetUniformv("model_", 1, cubeModel);
+			shaderPrgmScene.SetUniformv("model_", cubeModel);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 		//以上, 自定义帧缓冲渲染完成
