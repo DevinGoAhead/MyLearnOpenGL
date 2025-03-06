@@ -87,19 +87,18 @@ int main()
 		//GetError();
 		SdPmPlanet.SetUniformv("uProjection", projection);
 		glm::mat4 modelPlanet = glm::rotate(glm::mat4(1.f), (float)glm::radians(curTime) * 5.f, glm::vec3(0.f, 1.f, 0.f));
-		modelPlanet = glm::scale(modelPlanet, glm::vec3(1.5f));
 
 		SdPmPlanet.SetUniformv("uModel", modelPlanet);
 		
 		SdPmPlanet.SetUniformv("uCameraPos", camera.GetPos()); // 相机
 		// 灯光
 		SdPmPlanet.SetUniformv("uLight.ambient", glm::vec3(0.08f));
-		SdPmPlanet.SetUniformv("uLight.diffuse", glm::vec3(0.6f));
-		SdPmPlanet.SetUniformv("uLight.specular", glm::vec3(0.1f));
+		SdPmPlanet.SetUniformv("uLight.diffuse", glm::vec3(0.3f));
+		SdPmPlanet.SetUniformv("uLight.specular", glm::vec3(0.0f));
 		//GetError();
 		SdPmPlanet.SetUniformv("uLight.pos", lightPos);
 
-		SdPmPlanet.SetUniform("uMaterial.shininess", 32);// 材质
+		SdPmPlanet.SetUniform("uMaterial.shininess", 64);// 材质
 
 		planet.Draw(SdPmPlanet);
 		//GetError();
