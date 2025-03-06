@@ -13,16 +13,18 @@ int main()
 
 	//创建窗口, 800 600 为初始尺寸
 	GLFWwindow* pWindow = glfwCreateWindow(800, 800, "lighting", NULL, NULL);
-	glfwMaximizeWindow(pWindow); // 最大化窗口
 	glfwMakeContextCurrent(pWindow); // 设置 pWindow 窗口为当前上下文
 
 	if(!gladLoadGLLoader(GLADloadproc(glfwGetProcAddress))) {std::cerr << "Initilize GLAD error" << std::endl;}// 初始化 GLAD
-	//std::cout << glGetString(GL_VERSION);
-	glfwGetFramebufferSize(pWindow, &wndWidth, &wndHeight); // 获取缓冲区尺寸
 
-	glViewport(0, 0, wndWidth, wndHeight); // 设定视口尺寸
-	
 	glfwSetFramebufferSizeCallback(pWindow,viewport_size_callback);// 注册视口尺寸自动调整回调函数
+	glfwMaximizeWindow(pWindow); // 最大化窗口
+	
+	while (wndWidth == 0 || wndHeight == 0) {
+        glfwPollEvents();  // Make sure GLFW is processing events
+    }
+	
+	
 	glfwSetKeyCallback(pWindow, key_callback);// 注册键盘动作处理回调函数
 	glfwSetCursorPosCallback(pWindow, cursor_callback);// 注册光标捕捉函数
 	glfwSetScrollCallback(pWindow, scroll_callback);// 注册滚轮捕捉函数

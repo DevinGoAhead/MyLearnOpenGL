@@ -28,7 +28,7 @@ std::vector<float> quadVertices = {
 using uint = unsigned int;
 
 // window
-int wndWidth, wndHeight;
+int wndWidth = 0, wndHeight = 0;
 
 wxy::Camera camera({-2.f, 5.f, 20.f});//camera, pos
 
@@ -44,7 +44,10 @@ void error_callback(int error_code, const char* description){
 	exit(1);
 }
 
-void viewport_size_callback(GLFWwindow* window, int width, int height) { glViewport(0, 0, width, height); }
+void viewport_size_callback(GLFWwindow* window, int width, int height) {
+	glViewport(0, 0, width, height); 
+	wndWidth = width, wndHeight = height;
+}
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
 	switch (key)
