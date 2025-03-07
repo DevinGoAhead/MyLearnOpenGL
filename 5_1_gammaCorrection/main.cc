@@ -60,35 +60,66 @@ int main()
 
 	// 设置纹理
 	// 创建纹理对象
-	GLuint texPlane;
-	glGenTextures(1, &texPlane);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texPlane);
+	auto setTexParameter = [](GLuint& tex){
+		glGenTextures(1, &tex);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, tex);
+		// 设置纹理环绕参数
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+		// 设置纹理映射(过滤)方式
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // 放大
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // 缩小
+	};
 	
-	// 设置纹理环绕参数
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	auto GenerateTex = [](bool isGammaCorrect){
+		// 加载纹理
+		int imageWidth, imageHeight, nChannels;
+		unsigned char* pImageData = stbi_load("../resources/textures/wood.png", &imageWidth, &imageHeight, &nChannels, 0);
+		if(!pImageData) 
+		{
+			std::cerr << "failed to load Image" << '\n';
+			exit(1);
+		}
 
-	// 设置纹理映射(过滤)方式
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // 放大
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // 缩小
+		GLint internalFormat;
+		GLint format;
+		
+		if(nChannels == 4) {
+			internalFormat = isGammaCorrect ?  GL_SRGB_ALPHA : GL_RGBA;
+			format = GL_RGBA;
+		}
+		else if(nChannels == 3){
+			internalFormat = isGammaCorrect ?  GL_SRGB : GL_RGB;
+			format = GL_RGB;
+		}
 
-	// 加载纹理
-	int imageWidth, imageHeight, nChannels;
-	unsigned char* pImageData = stbi_load("../resources/textures/wood.png", &imageWidth, &imageHeight, &nChannels, 0);
-	if(!pImageData) 
-	{
-		std::cerr << "failed to load Image" << '\n';
-		exit(1);
-	}
+		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, imageWidth, imageHeight, 0, format, GL_UNSIGNED_BYTE, pImageData); // 开辟内存, 存储图片
+		glGenerateMipmap(GL_TEXTURE_2D);
+		stbi_image_free(pImageData);
+	};
 
-	GLint format;
-	if(nChannels == 4) format = GL_RGBA;
-	else if(nChannels == 3) format = GL_RGB;
+	GLuint texPlane;
+	setTexParameter(texPlane);
+	GenerateTex(false);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, format, imageWidth, imageHeight, 0, format, GL_UNSIGNED_BYTE, pImageData); // 开辟内存, 存储图片
-	glGenerateMipmap(GL_TEXTURE_2D);
-	stbi_image_free(pImageData);
+	GLuint texPlaneGammaCorr;
+	setTexParameter(texPlaneGammaCorr);
+	GenerateTex(true);
+
+	std::vector<glm::vec3> lightPoses{
+        glm::vec3(-5.0f, 0.0f, 0.0f),
+        glm::vec3(-2.0f, 0.0f, 0.0f),
+        glm::vec3(2.0f, 0.0f, 0.0f),
+        glm::vec3(5.0f, 0.0f, 0.0f)
+    };
+    std::vector<glm::vec3> lightColors{
+        glm::vec3(0.6f),
+        glm::vec3(0.8f),
+        glm::vec3(0.9f),
+        glm::vec3(0.7f)
+    };
 
 	wxy::ShaderProgram shaderPrgmPlane("./shader/plane.vert", "./shader/plane.frag");
 
@@ -114,19 +145,16 @@ int main()
 
 		// 材质
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texPlane);
-		shaderPrgmPlane.SetUniform("uMaterial.textureDiffuse", 0);
-		//shaderPrgmPlane.SetUniform("uMaterial.shininess", 32);
+		glBindTexture(GL_TEXTURE_2D, isGamma ? texPlaneGammaCorr : texPlane);
+		shaderPrgmPlane.SetUniform("textureDiffuse", 0);
 
 		shaderPrgmPlane.SetUniformv("uCameraPos", camera.GetPos()); // 相机位置
 
 		// 灯光
-		shaderPrgmPlane.SetUniformv("uLight.ambient", glm::vec3(0.1f));
-		shaderPrgmPlane.SetUniformv("uLight.diffuse", glm::vec3(0.7f));
-		shaderPrgmPlane.SetUniformv("uLight.specular", glm::vec3(0.9f));
-		shaderPrgmPlane.SetUniformv("uLight.pos", glm::vec3(0.f, 0.f, 0.f));
+		shaderPrgmPlane.SetUniformv("uLightColors", 4, lightColors.data());
+		shaderPrgmPlane.SetUniformv("uLightPoses", 4, lightPoses.data());
 
-		shaderPrgmPlane.SetUniform("uBlinn", blinn); // 切换 Phong 与 Blinn-Phong
+		shaderPrgmPlane.SetUniform("uGamma", isGamma); // 切换 是否 gamma 矫正
 		//blinn ? std::cout << "blinn" <<'\n' : std::cout << "phong" <<'\n';
 
 		glBindVertexArray(planeVAO);

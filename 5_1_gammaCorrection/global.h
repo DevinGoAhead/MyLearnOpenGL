@@ -42,7 +42,8 @@ void error_callback(int error_code, const char* description){
 	exit(1);
 }
 
-bool blinn = true, blinnKeyPressed = false;
+bool isBlinn = true, blinnKeyPressed = false;
+bool isGamma = true, gammaKeyPressed = false;
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
 	switch (key) {
 		case GLFW_KEY_ESCAPE: {
@@ -71,10 +72,17 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 			// 确保按下 B 键 只会生效一次, 即使你按了1秒甚至更长
 			// 否则当你按下 B后, 每一帧都会切换
 			if(action == GLFW_PRESS && !blinnKeyPressed) {
-				blinn = !blinn;
+				isBlinn = !isBlinn;
 				blinnKeyPressed = true;
 			}
 			if(action == GLFW_RELEASE) {blinnKeyPressed = false;}
+		}
+		case GLFW_KEY_G : { // 是否 gamma 矫正
+			if(action == GLFW_PRESS && !gammaKeyPressed) {
+				isGamma = !isGamma;
+				gammaKeyPressed = true;
+			}
+			if(action == GLFW_RELEASE) {gammaKeyPressed = false;}
 		}
 
 		default:{
