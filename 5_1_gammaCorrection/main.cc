@@ -121,9 +121,9 @@ int main()
 		shaderPrgmPlane.SetUniformv("uCameraPos", camera.GetPos()); // 相机位置
 
 		// 灯光
-		shaderPrgmPlane.SetUniformv("uLight.ambient", glm::vec3(0.05f));
-		shaderPrgmPlane.SetUniformv("uLight.diffuse", glm::vec3(0.4f));
-		shaderPrgmPlane.SetUniformv("uLight.specular", glm::vec3(1.f));
+		shaderPrgmPlane.SetUniformv("uLight.ambient", glm::vec3(0.1f));
+		shaderPrgmPlane.SetUniformv("uLight.diffuse", glm::vec3(0.7f));
+		shaderPrgmPlane.SetUniformv("uLight.specular", glm::vec3(0.9f));
 		shaderPrgmPlane.SetUniformv("uLight.pos", glm::vec3(0.f, 0.f, 0.f));
 
 		shaderPrgmPlane.SetUniform("uBlinn", blinn); // 切换 Phong 与 Blinn-Phong

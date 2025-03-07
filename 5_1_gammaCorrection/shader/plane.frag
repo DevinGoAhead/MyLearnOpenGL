@@ -25,8 +25,8 @@ uniform bool uBlinn;
 
 void main() {
 	vec3 normal = normalize(vNormal);
-	vec3 point2Light = normalize(vPos - uLight.pos);
-	vec3 point2Camera = normalize(vPos - uCameraPos);
+	vec3 point2Light = normalize(uLight.pos - vPos);
+	vec3 point2Camera = normalize(uCameraPos - vPos);
 	vec3 reflectLight = reflect(-point2Light, normal);
 	vec3 bisector = normalize(point2Light + point2Camera);
 
@@ -39,7 +39,7 @@ void main() {
 	
 	float spec = 0.f;
 	if(uBlinn) {spec = pow(max(dot(bisector, normal), 0), 32);}
-	else {spec = pow(max(dot(point2Camera, reflectLight), 0), 32);}
+	else {spec = pow(max(dot(point2Camera, reflectLight), 0), 8);}
 
 	vec3 resultSpecular = vec3(0.3f) * spec; // 没有反射纹理, 假设一个反射颜色
 	//vec3 resultSpecular = texture(uMaterial.textureSpecular, vTexCoord).rgb * uLight.specular * spec;
