@@ -82,7 +82,7 @@ using uint = unsigned int;
 // window
 int wndWidth = 0, wndHeight = 0;
 
-wxy::Camera camera({0.f, 0.f, 3.f});//camera, pos
+wxy::Camera camera({0.f, 1.f, 3.f});//camera, pos
 
 // time
 float curTime = 0.f, lastTime = 0.f, perFrameTime = 0.f;
