@@ -123,8 +123,8 @@ int main()
 		stbi_image_free(pImageData);
 	};
 
-	GLuint texPlaneGammaCorr;
-	setTexParameter(texPlaneGammaCorr, GL_REPEAT, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR);
+	GLuint planeTexGammaCorr;
+	setTexParameter(planeTexGammaCorr, GL_REPEAT, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR);
 	GenerateTex(true);
 
 	// FBO for shadow mapping
@@ -134,9 +134,9 @@ int main()
 
 	// Texture for depthMapFBO
 	GLuint depthMapTex;
-	setTexParameter(depthMapTex, GL_CLAMP_TO_EDGE, GL_NEAREST, GL_NEAREST); // 深度纹理默认不支持 GL_REPEAT GL_LINEAR
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 1024, 1024, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);// 为纹理开辟内存
+	setTexParameter(depthMapTex, GL_CLAMP_TO_EDGE, GL_NEAREST, GL_NEAREST); // 深度纹理默认不支持 GL_REPEAT and GL_LINEAR
+	int depthWidth = wndWidth / 2, depthHeight = wndHeight / 2;
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, depthWidth, depthHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);// 为纹理开辟内存
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMapTex, 0);
 	
 	// 不需要颜色缓冲
@@ -149,26 +149,26 @@ int main()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // 绑定至默认帧缓冲
 	
 	wxy::ShaderProgram shaderPrgmDepthMap("./shader/modelDepthMap.vert", "./shader/modelDepthMap.frag");
-	wxy::ShaderProgram shaderPrgmScreen("./shader/screen.vert", "./shader/screen.frag");
-
+	wxy::ShaderProgram shaderPrgmModel("./shader/model.vert", "./shader/model.frag");
 	glm::vec3 lightPos = glm::vec3{-2.f, 4.f, -1.f};
 	
-	std::vector<glm::mat4> cubeModelMats(3);
+	std::vector<glm::mat4> cubeModelMats;
 	//1
-	glm::mat4 model =  glm::translate(glm::mat4(1.f), glm::vec3(0.0f, 1.5f, 0.0));
+	glm::mat4 model =  glm::translate(glm::mat4(1.f), glm::vec3(0.0f, 1.f, 0.0));
     model = glm::scale(model, glm::vec3(0.5f));
-	cubeModelMats[0] = model;
+	cubeModelMats.push_back(model);
 	//2
 	model = glm::translate(glm::mat4(1.f), glm::vec3(2.0f, 0.0f, 1.0));
     model = glm::scale(model, glm::vec3(0.5f));
-	cubeModelMats[1] = model;
+	cubeModelMats.push_back(model);
 	//3
 	model = glm::translate(glm::mat4(1.f), glm::vec3(-1.0f, 0.0f, 2.0));
     model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
     model = glm::scale(model, glm::vec3(0.25));
-	cubeModelMats[2] = model;
+	cubeModelMats.push_back(model);
 	
 	// 主循环
+	glEnable(GL_DEPTH_TEST);
 	glfwSwapInterval(1); // 前后缓冲区交换间隔
 	while(!glfwWindowShouldClose(pWindow)) {
 		curTime = glfwGetTime();
@@ -176,48 +176,74 @@ int main()
 		lastTime = curTime;
 		
 		glClearColor(0.1, 0.1,0.1, 1.f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
+		// depth map
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-		glEnable(GL_DEPTH_TEST);
+		glViewport(0, 0, depthWidth, depthHeight);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
 		// 变换矩阵, 以"光源坐标系"为参照
 		glm::mat4 viewAtLight = glm::lookAt(lightPos, glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f)); // Up: 竖直向上
 
-		// 这里暂先使用正教投影
+		// 这里暂先使用正交投影
 		float orthoSize = 10.0f;
 		glm::mat4 projectionAtLight = glm::ortho(-orthoSize, orthoSize, -orthoSize, orthoSize, 1.f, 7.5f); // left right bottom top near far
+		glm::mat4 projViewAtLgt = projectionAtLight * viewAtLight;
 
 		shaderPrgmDepthMap.Use();
-		shaderPrgmDepthMap.SetUniformv("uModel", glm::mat4(1.f));
-		shaderPrgmDepthMap.SetUniformv("uView", viewAtLight);
-		shaderPrgmDepthMap.SetUniformv("uProjection",projectionAtLight);
+		shaderPrgmDepthMap.SetUniformv("uProjViewAtLgt", projViewAtLgt);
 		
-		glViewport(0, 0, 1024, 1024);
+		// depth map of plane
 		glBindVertexArray(planeVAO);
+		shaderPrgmDepthMap.SetUniformv("uModel", glm::mat4(1.f));
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
+		// depth map of cube
 		glBindVertexArray(cubeVAO);
 		for(const auto& mat : cubeModelMats) {
 			shaderPrgmDepthMap.SetUniformv("uModel", mat);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 
-		// sample to screen
-		glViewport(0, 0, wndWidth, wndHeight);
+		// draw model
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glDisable(GL_DEPTH_TEST);
+		glViewport(0, 0, wndWidth, wndHeight);
 		glClearColor(0.1, 0.1,0.1, 1.f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		
 
-		shaderPrgmScreen.Use();
+		// 视图和投影变换矩阵
+		glm::mat4 view = camera.GetViewMatrix();
+		glm::mat4 projection = glm::perspective(glm::radians(camera.GetFov()), (float)wndWidth / wndHeight, 0.1f, 100.f);
+
+		shaderPrgmModel.Use();
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, depthMapTex);
-		shaderPrgmScreen.SetUniform("uScreenTexture", 0);
+		glBindTexture(GL_TEXTURE_2D, planeTexGammaCorr);
+		shaderPrgmModel.SetUniform("uMaterial.textureDiffuse0", 0); // 材质纹理
 
-		glBindVertexArray(screenVAO);
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); // 本例用了4个顶点
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, depthMapTex);
+		shaderPrgmModel.SetUniform("uTextureDepthMap", 1); // 深度纹理
+		shaderPrgmModel.SetUniformv("uCameraPos", camera.GetPos()); // 相机位置
+		shaderPrgmModel.SetUniformv("uLightPos", lightPos); // 光位置
+
+		// matrix
+		shaderPrgmModel.SetUniformv("uView", view);
+		shaderPrgmModel.SetUniformv("uProjection", projection);
+		shaderPrgmModel.SetUniformv("uProjViewAtLgt", projViewAtLgt);
+		
+		// model of plane
+		glBindVertexArray(planeVAO);
+		shaderPrgmModel.SetUniformv("uModel", glm::mat4(1.f));
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		
+		// model of cube
+		glBindVertexArray(cubeVAO);
+		for(const auto& mat : cubeModelMats) {
+			shaderPrgmModel.SetUniformv("uModel", mat);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
 
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区
 		glfwPollEvents(); // 轮询 - glfw 与 窗口通信

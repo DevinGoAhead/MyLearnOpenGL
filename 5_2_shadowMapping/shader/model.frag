@@ -1,47 +1,53 @@
 #version 330 core
 
-in vec3 vPos;
-in vec3 vNormal;
-in vec2 vTexCoord;
+struct Material {
+	sampler2D textureDiffuse0;
+	sampler2D textureSpecular0;
+	int shininess;
+};
+
+in VOUT {
+	vec3 posWdSpace;
+	vec3 normal;
+	vec2 texCoord;
+	vec4 posClipSpaceAtLgt; // "光" 坐标系下的裁减空间, 即 Proj 变换后, 未裁减, 未透视除法
+} fIn;
 out vec4 fColor;
 
-uniform sampler2D textureDiffuse;
+uniform sampler2D uTextureDepthMap;
 uniform vec3 uCameraPos;
-uniform vec3 uLightColors[4];
-uniform vec3 uLightPoses[4];
-uniform bool uGamma;
+uniform vec3 uLightPos;
+uniform Material uMaterial;
 
-vec3 normal = normalize(vNormal);
-vec3 point2Camera = normalize(uCameraPos - vPos);
-
-// 一个简单的场景
-vec3 CalBlinnPhongLightColor(vec3 lightPos, vec3 lightColor) {
-	float distancePtLigt = length(lightPos - vPos);
-	vec3 point2Light = normalize(lightPos - vPos);
-	vec3 bisector = normalize(point2Light + point2Camera);
-
-	float diff = max(dot(point2Light, normal), 0);
-	vec3 lightDiffuse = lightColor * diff;
-	
-	float spec = pow(max(dot(bisector, normal), 0), 64);
-	vec3 lightSpecular = lightColor * spec;
-
-	// 衰减
-	float attenuation;
-	if(uGamma) attenuation = 1.f / (distancePtLigt * distancePtLigt + 1.f);// 1 /2.2 , 矫正硬件的 2.2次幂
-	else attenuation = 1.f / (distancePtLigt + 1.f); // 硬件 2.2次幂会放大衰减效果
-
-	return (lightDiffuse + lightSpecular) * attenuation;
+// true: in shadow
+bool DepthTest() {
+	vec4 posPerspDived = fIn.posClipSpaceAtLgt / fIn.posClipSpaceAtLgt.w;
+	vec3 posDepthMap = (posPerspDived.xyz + 1.f) * 0.5;
+	float zCur = posDepthMap.z;
+	float zDepthMap = texture(uTextureDepthMap, posDepthMap.xy).r;
+	return zCur > zDepthMap;
 }
 
 void main() {
-	vec3 lightColors = vec3(0.f);
-	for(int i = 0; i < 4; ++i) {
-		lightColors += CalBlinnPhongLightColor(uLightPoses[i], uLightColors[i]);
+	vec3 lightColor = vec3(0.3); // 这里直接将光照强度硬编码在着色器中
+	vec3 materialColor = texture(uMaterial.textureDiffuse0, fIn.texCoord).rgb; // 本例仅有漫反射纹理
+
+	vec3 normal = normalize(fIn.normal);
+	vec3 point2Camera = normalize(uCameraPos - fIn.posWdSpace);
+	vec3 point2Light = normalize(uLightPos - fIn.posWdSpace);
+	vec3 bisector = normalize(point2Light + point2Camera);
+
+	vec3 lightAmbient = lightColor * 0.3; // 不进行阴影计算, 避免全黑
+	
+	float diff = max(dot(point2Light, normal), 0.f);
+	float spec = pow(max(dot(bisector, normal), 0.f), uMaterial.shininess);
+	vec3 lightDiffuse = vec3(0.f), lightSpecular = vec3(0.f);
+	if(!DepthTest()) {
+		lightDiffuse = lightColor* diff;
+		lightSpecular = lightColor * spec;
 	}
 
-	vec3 color= texture(textureDiffuse, vTexCoord).rgb; // 本例仅有漫反射纹理
-	color *= lightColors;
-	if(uGamma) color = pow(color, vec3(1.f / 2.2));
+	vec3 color = (lightAmbient + lightDiffuse + lightSpecular) * materialColor;
+	color = pow(color, vec3(1.f / 2.2)); // gamma correction
 	fColor = vec4(color, 1.f);
 }
