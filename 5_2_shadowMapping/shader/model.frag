@@ -28,7 +28,7 @@ float DepthTest(vec3 point2Light, vec3 normal) {
 	// 因为 光空间的点没有通过glPosition传递, 因此图形管线不会对这些点进行裁剪
 	// 因此 xyz 都可能超过1.0, 这里解决 z > 1.0 的情况, 直接设定为被照亮
 	// 但是实际测试下来 Clap to edge + if(zPerspDived2Tex > 1.f) return false; 就可以照亮整个场景了, 不知是否合理
-	if(zPerspDived2Tex > 1.f) return 0.f;
+	if(zPerspDived2Tex > 1.f) return 1.f;
 	
 	// (1 - max(dot(point2Light, normal), 0.f)), 夹角越大, 值越大, 范围[0, 1]
 	// valueMax * (1 - max(dot(point2Light, normal), 0.f)), 得[0, valueMax]

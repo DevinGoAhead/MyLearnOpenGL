@@ -91,7 +91,7 @@ int main()
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrappingParam);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrappingParam);
 		if(wrappingParam == GL_CLAMP_TO_BORDER) {
-			GLfloat borderColor[] = {1.f, 0.f, 0.f, 0.f};
+			GLfloat borderColor[] ={1.0f, 1.0f, 1.0f, 1.0f};
 			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 		}
 
@@ -153,6 +153,7 @@ int main()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // 绑定至默认帧缓冲
 	
 	wxy::ShaderProgram shaderPrgmDepthMap("./shader/modelDepthMap.vert", "./shader/modelDepthMap.frag");
+	wxy::ShaderProgram shaderPrgmScreen("./shader/screen.vert", "./shader/screen.frag");
 	wxy::ShaderProgram shaderPrgmModel("./shader/model.vert", "./shader/model.frag");
 	glm::vec3 lightPos = glm::vec3{-2.f, 4.f, -1.f};
 	
@@ -162,7 +163,7 @@ int main()
     model = glm::scale(model, glm::vec3(0.5f));
 	cubeModelMats.push_back(model);
 	//2
-	model = glm::translate(glm::mat4(1.f), glm::vec3(2.0f, 0.0f, 1.0));
+	model = glm::translate(glm::mat4(1.f), glm::vec3(3.0f, 0.0f, 1.0));
     model = glm::scale(model, glm::vec3(0.5f));
 	cubeModelMats.push_back(model);
 	//3
@@ -190,9 +191,10 @@ int main()
 		// 变换矩阵, 以"光源坐标系"为参照
 		glm::mat4 viewAtLight = glm::lookAt(lightPos, glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f)); // Up: 竖直向上
 
-		// 这里暂先使用正交投影
-		float orthoSize = 10.0f;
-		glm::mat4 projectionAtLight = glm::ortho(-orthoSize, orthoSize, -orthoSize, orthoSize, 1.f, 7.5f); // left right bottom top near far
+		// 测试透视投影
+		// float orthoSize = 10.0f;
+		// glm::mat4 projectionAtLight = glm::ortho(-orthoSize, orthoSize, -orthoSize, orthoSize, 1.f, 7.5f); // left right bottom top near far
+		glm::mat4 projectionAtLight = glm::perspective(glm::radians(100.f), (float)wndWidth / wndHeight, 1.5f, 7.f);
 		glm::mat4 projViewAtLgt = projectionAtLight * viewAtLight;
 
 		shaderPrgmDepthMap.Use();
@@ -213,7 +215,7 @@ int main()
 		}
 		//glDisable(GL_CULL_FACE);
 		
-		// draw model
+		// // draw model
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, wndWidth, wndHeight);
 		glClearColor(0.1, 0.1,0.1, 1.f);
@@ -243,7 +245,7 @@ int main()
 		// model of plane
 		glBindVertexArray(planeVAO);
 		shaderPrgmModel.SetUniformv("uModel", glm::mat4(1.f));
-		//shaderPrgmModel.SetUniform("uIs3D", 0);
+		shaderPrgmModel.SetUniform("uIs3D", 0);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 		
 		// model of cube
@@ -254,6 +256,20 @@ int main()
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 
+		// // Depth Map debug
+		// glDisable(GL_DEPTH_TEST);
+ 		// glClearColor(0.0, 0.0,0.0, 1.f);
+ 		// glClear(GL_COLOR_BUFFER_BIT);
+ 
+ 		// shaderPrgmScreen.Use();
+ 		// glActiveTexture(GL_TEXTURE0);
+ 		// glBindTexture(GL_TEXTURE_2D, depthMapTex);
+ 		// shaderPrgmScreen.SetUniform("uScreenTexture", 0);
+ 
+ 		// glBindVertexArray(screenVAO);
+ 		// glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); // 本例用了4个顶点
+
+		// glEnable(GL_DEPTH_TEST);
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区
 		glfwPollEvents(); // 轮询 - glfw 与 窗口通信
 	}
