@@ -18,6 +18,7 @@ uniform sampler2D uTextureDepthMap;
 uniform vec3 uCameraPos;
 uniform vec3 uLightPos;
 uniform Material uMaterial;
+uniform int uIs3D; // 标识模型是否为 3D(不需要展示内部的3D)
 
 // true: in shadow
 bool DepthTest(vec3 point2Light, vec3 normal) {
@@ -28,7 +29,8 @@ bool DepthTest(vec3 point2Light, vec3 normal) {
 	// (1 - max(dot(point2Light, normal), 0.f)), 夹角越大, 值越大, 范围[0, 1]
 	// valueMax * (1 - max(dot(point2Light, normal), 0.f)), 得[0, valueMax]
 	// 最外围的max, [bias, 0.05]
-	float bias = + max(0.18 * (1 - max(dot(point2Light, normal), 0.f)), 0.005);
+	// 对 3D, 在外部启用 front face culling, shander 中 不使用 shadow bias, 避免 peter panning 问题
+	float bias = (uIs3D == 1 ? 0.f : max(0.2 * (1 - max(dot(point2Light, normal), 0.f)), 0.005));
 	return zPerspDived2Tex > zDepthMap + bias; // 将最终的bias限制在[bias + 0.05]
 }
 

@@ -201,11 +201,14 @@ int main()
 
 		// depth map of cube
 		glBindVertexArray(cubeVAO);
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_FRONT); // 记录背面的深度, 在消除 shadow acen 的同时还不会造成 peter panning 问题
 		for(const auto& mat : cubeModelMats) {
 			shaderPrgmDepthMap.SetUniformv("uModel", mat);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
-
+		glDisable(GL_CULL_FACE);
+		
 		// draw model
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, wndWidth, wndHeight);
@@ -236,10 +239,12 @@ int main()
 		// model of plane
 		glBindVertexArray(planeVAO);
 		shaderPrgmModel.SetUniformv("uModel", glm::mat4(1.f));
+		shaderPrgmModel.SetUniform("uIs3D", 0);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 		
 		// model of cube
 		glBindVertexArray(cubeVAO);
+		shaderPrgmModel.SetUniform("uIs3D", 1);
 		for(const auto& mat : cubeModelMats) {
 			shaderPrgmModel.SetUniformv("uModel", mat);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
