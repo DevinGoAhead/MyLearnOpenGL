@@ -54,11 +54,6 @@ int main()
 		glBindVertexArray(0); //重置默认绑定
 	};
 
-	// plane
-	GLuint planeVBO, planeVAO;
-	SetVertices(planeVBO, planeVertices);
-	SetVAOVerNorTex(planeVAO);
-
 	// cube
 	GLuint cubeVBO, cubeVAO;
 	SetVertices(cubeVBO, cubeVertices);
@@ -83,21 +78,24 @@ int main()
 
 	// 设置纹理
 	// 创建纹理对象
-	auto setTexParameter = [](GLuint& tex, GLint wrappingParam, GLint magFilterParam, GLint minFilterParam){
+	auto setTexParameter = [](GLuint& tex, GLenum target, GLint wrappingParam, GLint magFilterParam, GLint minFilterParam){
 		glGenTextures(1, &tex);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, tex);
+		//glActiveTexture(GL_TEXTURE0);
+		glBindTexture(target, tex);
 		// 设置纹理环绕参数
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrappingParam);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrappingParam);
+		glTexParameteri(target, GL_TEXTURE_WRAP_S, wrappingParam);
+		glTexParameteri(target, GL_TEXTURE_WRAP_T, wrappingParam);
+		if(target == GL_TEXTURE_CUBE_MAP) glTexParameteri(target, GL_TEXTURE_WRAP_R, wrappingParam);
+
 		if(wrappingParam == GL_CLAMP_TO_BORDER) {
 			GLfloat borderColor[] ={1.0f, 1.0f, 1.0f, 1.0f};
-			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+			glTexParameterfv(target, GL_TEXTURE_BORDER_COLOR, borderColor);
 		}
+		
 
 		// 设置纹理映射(过滤)方式
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilterParam); // 放大
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilterParam); // 缩小
+		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, magFilterParam); // 放大
+		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, minFilterParam); // 缩小
 	};
 	
 	auto GenerateTex = [](bool isGammaCorrect){
@@ -128,7 +126,7 @@ int main()
 	};
 
 	GLuint planeTexGammaCorr;
-	setTexParameter(planeTexGammaCorr, GL_REPEAT, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR);
+	setTexParameter(planeTexGammaCorr, GL_TEXTURE_2D, GL_REPEAT, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR);
 	GenerateTex(true);
 
 	// FBO for shadow mapping
@@ -137,11 +135,15 @@ int main()
 	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 
 	// Texture for depthMapFBO
-	GLuint depthMapTex;
-	setTexParameter(depthMapTex, GL_CLAMP_TO_BORDER, GL_NEAREST, GL_NEAREST); // 深度纹理默认不支持 GL_REPEAT and GL_LINEAR
-	int depthWidth = wndWidth / 2, depthHeight = wndHeight / 2;
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, depthWidth, depthHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);// 为纹理开辟内存
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMapTex, 0);
+	GLuint depthCubeMapTex;
+	setTexParameter(depthCubeMapTex, GL_TEXTURE_CUBE_MAP, GL_CLAMP_TO_EDGE, GL_NEAREST, GL_NEAREST); // 深度纹理默认不支持 GL_REPEAT and GL_LINEAR
+	int depthWidth = 1024, depthHeight = 1024;
+	for(int i = 0; i < 6; ++i) {
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, depthWidth, depthHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);// 为纹理开辟内存
+	}
+	// glFramebufferTexture2D 仅支持 2D 纹理
+	// glFramebufferTexture 后期引入汉书, 可自动推断纹理类型
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubeMapTex, 0);
 	
 	// 不需要颜色缓冲
 	glDrawBuffer(GL_NONE);
@@ -152,24 +154,42 @@ int main()
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // 绑定至默认帧缓冲
 	
-	wxy::ShaderProgram shaderPrgmDepthMap("./shader/modelDepthMap.vert", "./shader/modelDepthMap.frag");
-	wxy::ShaderProgram shaderPrgmScreen("./shader/screen.vert", "./shader/screen.frag");
+	wxy::ShaderProgram shaderPrgmDepthMap("./shader/modelDepthMap.vert", "./shader/modelDepthMap.geom", "./shader/modelDepthMap.frag");
 	wxy::ShaderProgram shaderPrgmModel("./shader/model.vert", "./shader/model.frag");
-	glm::vec3 lightPos = glm::vec3{-2.f, 4.f, -1.f};
+
+	// 光坐标系视图和投影矩阵
+	glm::vec3 lightPos = glm::vec3(0.f);
+	float near = 1.f, far = 25.f;
+	float depthAspect = (float)depthWidth / depthHeight;
+	glm::mat4 lightProj = glm::perspective(glm::radians(90.f), depthAspect, near, far);
+	std::vector<glm::mat4> lightProjViewMats;
+
+	// lightPos + center, 确保看的方向是相对光源的, 而不是世界坐标中的绝对坐标
+	lightProjViewMats.push_back(lightProj * glm::lookAt(lightPos, lightPos + glm::vec3(1.f, 0.f, 0.f), glm::vec3(0.f, -1.f, 0.f))); // right, up -Y
+	lightProjViewMats.push_back(lightProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.f, 0.f, 0.f), glm::vec3(0.f, -1.f, 0.f))); // left, up -Y
+	lightProjViewMats.push_back(lightProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f, 0.f, 1.f))); // top, up +Z
+	lightProjViewMats.push_back(lightProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.f, 0.f, -1.f))); // bot, up -Z
+	lightProjViewMats.push_back(lightProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, -1.f, 0.f))); // back, up -Y
+	lightProjViewMats.push_back(lightProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, -1.f, 0.f))); // front, up -Y
 	
 	std::vector<glm::mat4> cubeModelMats;
 	//1
-	glm::mat4 model =  glm::translate(glm::mat4(1.f), glm::vec3(0.0f, 1.f, 0.0));
-    model = glm::scale(model, glm::vec3(0.5f));
+	glm::mat4 model =  glm::translate(glm::mat4(1.f), glm::vec3(4.0f, -3.5f, 0.0));
 	cubeModelMats.push_back(model);
 	//2
-	model = glm::translate(glm::mat4(1.f), glm::vec3(3.0f, 0.0f, 1.0));
-    model = glm::scale(model, glm::vec3(0.5f));
+	model = glm::translate(glm::mat4(1.f), glm::vec3(2.0f, 3.0f, 1.0));
+    model = glm::scale(model, glm::vec3(1.5f));
 	cubeModelMats.push_back(model);
 	//3
-	model = glm::translate(glm::mat4(1.f), glm::vec3(-1.0f, 0.0f, 2.0));
+	model = glm::translate(glm::mat4(1.f), glm::vec3(-3.0f, -1.f, 0.0));
+	cubeModelMats.push_back(model);
+	//4
+	model = glm::translate(glm::mat4(1.f), glm::vec3(-1.5f, 1.f, 1.5f));
+	cubeModelMats.push_back(model);
+	//5
+	model = glm::translate(glm::mat4(1.f), glm::vec3(-1.5f, 2.f, -3.f));
     model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
-    model = glm::scale(model, glm::vec3(0.25));
+    model = glm::scale(model, glm::vec3(1.5f));
 	cubeModelMats.push_back(model);
 	
 	// 主循环
@@ -188,40 +208,31 @@ int main()
 		glViewport(0, 0, depthWidth, depthHeight);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
-		// 变换矩阵, 以"光源坐标系"为参照
-		glm::mat4 viewAtLight = glm::lookAt(lightPos, glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f)); // Up: 竖直向上
-
-		// 测试透视投影
-		// float orthoSize = 10.0f;
-		// glm::mat4 projectionAtLight = glm::ortho(-orthoSize, orthoSize, -orthoSize, orthoSize, 1.f, 7.5f); // left right bottom top near far
-		glm::mat4 projectionAtLight = glm::perspective(glm::radians(100.f), (float)wndWidth / wndHeight, 1.5f, 7.f);
-		glm::mat4 projViewAtLgt = projectionAtLight * viewAtLight;
-
 		shaderPrgmDepthMap.Use();
-		shaderPrgmDepthMap.SetUniformv("uProjViewAtLgt", projViewAtLgt);
+		shaderPrgmDepthMap.SetUniformv("uLightProjViewMats", 6, lightProjViewMats.data());
+		shaderPrgmDepthMap.SetUniformv("uLightPos", lightPos);
+		shaderPrgmDepthMap.SetUniform("uFar", far);
 		
-		// depth map of plane
-		glBindVertexArray(planeVAO);
-		shaderPrgmDepthMap.SetUniformv("uModel", glm::mat4(1.f));
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-
-		// depth map of cube
+		// depth map of room cube
 		glBindVertexArray(cubeVAO);
-		//glEnable(GL_CULL_FACE);
-		//glCullFace(GL_FRONT); // 记录背面的深度, 在消除 shadow acen 的同时还不会造成 peter panning 问题, 实测效果很差
+		shaderPrgmDepthMap.SetUniformv("uModel", glm::scale(glm::mat4(1.f), glm::vec3(10.f))); // 放大 10 倍
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		// depth map of member cubes
+		glBindVertexArray(cubeVAO);
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_FRONT); // 记录背面的深度, 在消除 shadow acen 的同时还不会造成 peter panning 问题, 实测效果很差
 		for(const auto& mat : cubeModelMats) {
 			shaderPrgmDepthMap.SetUniformv("uModel", mat);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
-		//glDisable(GL_CULL_FACE);
+		glDisable(GL_CULL_FACE);
 		
-		// // draw model
+		// model
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, wndWidth, wndHeight);
 		glClearColor(0.1, 0.1,0.1, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
-
 		// 视图和投影变换矩阵
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.GetFov()), (float)wndWidth / wndHeight, 0.1f, 100.f);
@@ -232,7 +243,7 @@ int main()
 		shaderPrgmModel.SetUniform("uMaterial.textureDiffuse0", 0); // 材质纹理
 
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, depthMapTex);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubeMapTex);
 		shaderPrgmModel.SetUniform("uTextureDepthMap", 1); // 深度纹理
 		shaderPrgmModel.SetUniformv("uCameraPos", camera.GetPos()); // 相机位置
 		shaderPrgmModel.SetUniformv("uLightPos", lightPos); // 光位置
@@ -240,36 +251,21 @@ int main()
 		// matrix
 		shaderPrgmModel.SetUniformv("uView", view);
 		shaderPrgmModel.SetUniformv("uProjection", projection);
-		shaderPrgmModel.SetUniformv("uProjViewAtLgt", projViewAtLgt);
+		//shaderPrgmModel.SetUniformv("uProjViewAtLgt", projViewAtLgt);
 		
-		// model of plane
-		glBindVertexArray(planeVAO);
-		shaderPrgmModel.SetUniformv("uModel", glm::mat4(1.f));
-		shaderPrgmModel.SetUniform("uIs3D", 0);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		
-		// model of cube
+		// model of room cube
 		glBindVertexArray(cubeVAO);
+		shaderPrgmModel.SetUniformv("uModel", glm::scale(glm::mat4(1.f), glm::vec3(10.f)));
+		shaderPrgmModel.SetUniform("uRNormal", 1);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		
+		// model of menber cube
 		//shaderPrgmModel.SetUniform("uIs3D", );
+		shaderPrgmModel.SetUniform("uRNormal", 0);
 		for(const auto& mat : cubeModelMats) {
 			shaderPrgmModel.SetUniformv("uModel", mat);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
-
-		// // Depth Map debug
-		// glDisable(GL_DEPTH_TEST);
- 		// glClearColor(0.0, 0.0,0.0, 1.f);
- 		// glClear(GL_COLOR_BUFFER_BIT);
- 
- 		// shaderPrgmScreen.Use();
- 		// glActiveTexture(GL_TEXTURE0);
- 		// glBindTexture(GL_TEXTURE_2D, depthMapTex);
- 		// shaderPrgmScreen.SetUniform("uScreenTexture", 0);
- 
- 		// glBindVertexArray(screenVAO);
- 		// glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); // 本例用了4个顶点
-
-		// glEnable(GL_DEPTH_TEST);
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区
 		glfwPollEvents(); // 轮询 - glfw 与 窗口通信
 	}
