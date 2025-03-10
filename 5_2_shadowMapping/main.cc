@@ -90,6 +90,10 @@ int main()
 		// 设置纹理环绕参数
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrappingParam);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrappingParam);
+		if(wrappingParam == GL_CLAMP_TO_BORDER) {
+			GLfloat borderColor[] = {1.f, 0.f, 0.f, 0.f};
+			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+		}
 
 		// 设置纹理映射(过滤)方式
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilterParam); // 放大
@@ -134,7 +138,7 @@ int main()
 
 	// Texture for depthMapFBO
 	GLuint depthMapTex;
-	setTexParameter(depthMapTex, GL_CLAMP_TO_EDGE, GL_NEAREST, GL_NEAREST); // 深度纹理默认不支持 GL_REPEAT and GL_LINEAR
+	setTexParameter(depthMapTex, GL_CLAMP_TO_BORDER, GL_NEAREST, GL_NEAREST); // 深度纹理默认不支持 GL_REPEAT and GL_LINEAR
 	int depthWidth = wndWidth / 2, depthHeight = wndHeight / 2;
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, depthWidth, depthHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);// 为纹理开辟内存
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMapTex, 0);
@@ -201,13 +205,13 @@ int main()
 
 		// depth map of cube
 		glBindVertexArray(cubeVAO);
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_FRONT); // 记录背面的深度, 在消除 shadow acen 的同时还不会造成 peter panning 问题
+		//glEnable(GL_CULL_FACE);
+		//glCullFace(GL_FRONT); // 记录背面的深度, 在消除 shadow acen 的同时还不会造成 peter panning 问题, 实测效果很差
 		for(const auto& mat : cubeModelMats) {
 			shaderPrgmDepthMap.SetUniformv("uModel", mat);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
-		glDisable(GL_CULL_FACE);
+		//glDisable(GL_CULL_FACE);
 		
 		// draw model
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -239,12 +243,12 @@ int main()
 		// model of plane
 		glBindVertexArray(planeVAO);
 		shaderPrgmModel.SetUniformv("uModel", glm::mat4(1.f));
-		shaderPrgmModel.SetUniform("uIs3D", 0);
+		//shaderPrgmModel.SetUniform("uIs3D", 0);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 		
 		// model of cube
 		glBindVertexArray(cubeVAO);
-		shaderPrgmModel.SetUniform("uIs3D", 1);
+		//shaderPrgmModel.SetUniform("uIs3D", );
 		for(const auto& mat : cubeModelMats) {
 			shaderPrgmModel.SetUniformv("uModel", mat);
 			glDrawArrays(GL_TRIANGLES, 0, 36);

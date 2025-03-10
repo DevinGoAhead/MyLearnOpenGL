@@ -18,19 +18,23 @@ uniform sampler2D uTextureDepthMap;
 uniform vec3 uCameraPos;
 uniform vec3 uLightPos;
 uniform Material uMaterial;
-uniform int uIs3D; // 标识模型是否为 3D(不需要展示内部的3D)
+// uniform int uIs3D; // 标识模型是否为 3D(不需要展示内部的3D), 因为实测 Shadow Bias 效果比 Cull Front 效果更好, 所以舍弃这个方案
 
 // true: in shadow
 bool DepthTest(vec3 point2Light, vec3 normal) {
 	vec4 posPerspDived = fIn.posClipSpaceAtLgt / fIn.posClipSpaceAtLgt.w;
 	vec3 posPerspDived2Tex = (posPerspDived.xyz + 1.f) * 0.5;
 	float zPerspDived2Tex = posPerspDived2Tex.z;
+	// 因为 光空间的点没有通过glPosition传递, 因此图形管线不会对这些点进行裁剪
+	// 因此 xyz 都可能超过1.0, 这里解决 z > 1.0 的情况, 直接设定为被照亮
+	// 但是实际测试下来 Clap to edge + if(zPerspDived2Tex > 1.f) return false; 就可以照亮整个场景了, 不知是否合理
+	if(zPerspDived2Tex > 1.f) return false;
 	float zDepthMap = texture(uTextureDepthMap, posPerspDived2Tex.xy).r;
+	
 	// (1 - max(dot(point2Light, normal), 0.f)), 夹角越大, 值越大, 范围[0, 1]
 	// valueMax * (1 - max(dot(point2Light, normal), 0.f)), 得[0, valueMax]
 	// 最外围的max, [bias, 0.05]
-	// 对 3D, 在外部启用 front face culling, shander 中 不使用 shadow bias, 避免 peter panning 问题
-	float bias = (uIs3D == 1 ? 0.f : max(0.2 * (1 - max(dot(point2Light, normal), 0.f)), 0.005));
+	float bias = max(0.18 * (1 - max(dot(point2Light, normal), 0.f)), 0.005);
 	return zPerspDived2Tex > zDepthMap + bias; // 将最终的bias限制在[bias + 0.05]
 }
 
