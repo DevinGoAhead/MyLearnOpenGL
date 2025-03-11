@@ -219,13 +219,13 @@ int main()
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		// depth map of member cubes
-		//glEnable(GL_CULL_FACE);
-		//glCullFace(GL_FRONT); // 记录背面的深度, 在消除 shadow acen 的同时还不会造成 peter panning 问题, 实测效果很差
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_FRONT); // 记录背面的深度, 在消除 shadow acen 的同时还不会造成 peter panning 问题, 在本例中效果还可以
 		for(const auto& mat : cubeModelMats) {
 			shaderPrgmDepthMap.SetUniformv("uModel", mat);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
-		//glDisable(GL_CULL_FACE);
+		glDisable(GL_CULL_FACE);
 		
 		// model
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);

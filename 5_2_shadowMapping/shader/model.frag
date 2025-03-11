@@ -31,15 +31,17 @@ vec3 sampleOffsetDirections[20] = vec3[]
 );
 
 // float: 1.f 完全被照亮
-float DepthTest() {
+float DepthTest(vec3 normal) {
 	vec3 light2point = fIn.pos - uLightPos; // cube纹理采样的方向向量不需要标准化
 	// 或者 depthCur /uFar, 或者 depthMap * uFar, 我感觉后者精度应该更高
 	float depthCur = length(light2point); // 没有被裁剪的,可能超过uFar
 	
 	if(depthCur > uFar) return 1.f; // 越界认为被照亮
-	float diskRadius = 0.05; // 静态
+	float cameraPtLen = length(fIn.pos - uCameraPos);
+	float diskRadius = (1 + cameraPtLen / uFar) * 0.05;
+	float bias = max(0.15 * (1 - max(dot(normal, normalize(-light2point)), 0.f)), 0.05);
+	//float bias = 0.05;
 	float unShadowPercent = 0.f;
-	float bias = 0.05f;
 	for(int i = 0; i < 20; ++i) {
 		float depthMap = texture(uTextureDepthMap, light2point + sampleOffsetDirections[i] * diskRadius).r * uFar;// 深度贴图(纹理) 中存储的深度, 这是被裁剪过的,一定 < 1
 		if(depthCur < depthMap + bias) unShadowPercent += 1.f;
@@ -61,7 +63,7 @@ void main() {
 
 	vec3 lightAmbient = lightColor * 0.3; // 不进行阴影计算, 避免全黑
 	
-	float percent = DepthTest();
+	float percent = DepthTest(normal);
 	float diff = max(dot(point2Light, normal), 0.f);
 	vec3 lightDiffuse = lightColor * diff * percent;
 
