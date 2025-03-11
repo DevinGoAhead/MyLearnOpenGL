@@ -219,14 +219,13 @@ int main()
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		// depth map of member cubes
-		glBindVertexArray(cubeVAO);
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_FRONT); // 记录背面的深度, 在消除 shadow acen 的同时还不会造成 peter panning 问题, 实测效果很差
+		//glEnable(GL_CULL_FACE);
+		//glCullFace(GL_FRONT); // 记录背面的深度, 在消除 shadow acen 的同时还不会造成 peter panning 问题, 实测效果很差
 		for(const auto& mat : cubeModelMats) {
 			shaderPrgmDepthMap.SetUniformv("uModel", mat);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
-		glDisable(GL_CULL_FACE);
+		//glDisable(GL_CULL_FACE);
 		
 		// model
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -255,13 +254,14 @@ int main()
 		
 		// model of room cube
 		glBindVertexArray(cubeVAO);
+		shaderPrgmModel.SetUniform("uFar", far);
 		shaderPrgmModel.SetUniformv("uModel", glm::scale(glm::mat4(1.f), glm::vec3(10.f)));
-		shaderPrgmModel.SetUniform("uRNormal", 1);
+		//shaderPrgmModel.SetUniform("uRNormal", 1);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 		
 		// model of menber cube
 		//shaderPrgmModel.SetUniform("uIs3D", );
-		shaderPrgmModel.SetUniform("uRNormal", 0);
+		//shaderPrgmModel.SetUniform("uRNormal", 0);
 		for(const auto& mat : cubeModelMats) {
 			shaderPrgmModel.SetUniformv("uModel", mat);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
