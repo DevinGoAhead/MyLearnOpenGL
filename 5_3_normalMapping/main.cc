@@ -130,8 +130,9 @@ int main()
 
 	glm::vec3 tagent = f * glm::vec3(dV2 * E1.x - dV1 * E2.x, dV2 * E1.y - dV1 * E2.y, dV2 * E1.z - dV1 * E2.z);
 	//glm::vec3 bitagent = f * glm::vec3(-dU2 * E1.x + dU1 * E2.x, -dU2 * E1.y + dU1 * E2.y, -dU2 * E1.z + dU1 * E2.z);
-
+	//std::cout << normal.x << " " << normal.y<< " " << normal.z;
 	tagent = glm::normalize(tagent - normal * (glm::dot(normal, tagent))); // 施密特正交化
+	//std::cout << tagent.x << " " << tagent.y<< " " << tagent.z;
 	glm::vec3 bitagent = glm::normalize(glm::cross(normal, tagent));
 	glm::mat3 matTBN{tagent, bitagent, normal};
 
@@ -163,17 +164,16 @@ int main()
 		shaderPrgmModel.SetUniform("uMaterial.textureNormal", 1); // 深度纹理
 		shaderPrgmModel.SetUniformv("uCameraPos", camera.GetPos()); // 相机位置
 		shaderPrgmModel.SetUniformv("uLightPos", lightPos); // 光位置
-		shaderPrgmModel.SetUniformv("uNormal", normal); // 光位置
 
 		// matrix
+		shaderPrgmModel.SetUniformv("uTBN", matTBN);
 		shaderPrgmModel.SetUniformv("uView", view);
 		shaderPrgmModel.SetUniformv("uProjection", projection);
-		glm::mat4 model = glm::rotate(glm::mat4(1.f), glm::radians(curTime * 10), glm::vec3(1.0f, 0.f, 0.f));
-		shaderPrgmModel.SetUniformv("uModel", glm::mat4(1.f));
+		glm::mat4 model = glm::rotate(glm::mat4(1.f), glm::radians(20.f), glm::vec3(0.f, 1.f, 0.f));
+		shaderPrgmModel.SetUniformv("uModel", model);
 		
 		glBindVertexArray(quadVAO);
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区
 		glfwPollEvents(); // 轮询 - glfw 与 窗口通信
 	}
