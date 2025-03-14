@@ -22,6 +22,7 @@ namespace wxy{
 		glm::vec3 _position;
 		glm::vec3 _normal;
 		glm::vec2 _texCoord;
+		glm::vec3 _tangent;
 	};
 
 	// 纹理
@@ -60,19 +61,18 @@ namespace wxy{
 	void Mesh::Draw(ShaderProgram shaderProgram) {
 		uint size = _textures.size();
 
-		uint textureDiffuseNr = 0, textureSpecularNr = 0, textureReflectionNr = 0;
+		uint textureDiffuseNr = 0, textureSpecularNr = 0, textureReflectionNr = 0, textureNormalNr = 0;
 		std::string number;
 		//GLenum target;
 		for(uint i = 0; i < size; ++i){
 			// _typeName: textureDiffuse textureSpecular textureReflection
 			std::string texTypeName = _textures[i]._typeName;
 			glActiveTexture(GL_TEXTURE0 + i);
-			//target = (texTypeName == "textureReflection" ? GL_TEXTURE_2D : GL_TEXTURE_2D);
-			//glBindTexture(target, _textures[i]._id); // 将纹理绑定到目标类型
 			glBindTexture(GL_TEXTURE_2D, _textures[i]._id); // 将纹理绑定到目标类型
 			if(texTypeName == "textureDiffuse") {number = std::to_string(textureDiffuseNr++);}
 			else if(texTypeName == "textureSpecular") {number = std::to_string(textureSpecularNr++);}
 			else if(texTypeName == "textureReflection") {number = std::to_string(textureReflectionNr++);}
+			else if(texTypeName == "textureNormal") {number = std::to_string(textureNormalNr++);}
 			shaderProgram.SetUniform(("uMaterial." + texTypeName + number).c_str(), i); // 将纹理单元的索引传递给 GPU 中对应的 Sampler 对象
 		}
 		//shaderProgram.SetUniform("material_.shininess",64); // 这里暂先硬编码, 有需要再优化
@@ -103,7 +103,8 @@ namespace wxy{
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, _position)); // 位置坐标
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, _normal)); // 法线坐标
 		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, _texCoord)); // 纹理坐标
-		glEnableVertexAttribArray(0), glEnableVertexAttribArray(1), glEnableVertexAttribArray(2);
+		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, _tangent)); // 法线纹理
+		glEnableVertexAttribArray(0), glEnableVertexAttribArray(1), glEnableVertexAttribArray(2), glEnableVertexAttribArray(3);;
 
 		glBindVertexArray(0);// 解绑 _VAO, 停止记录
 	}

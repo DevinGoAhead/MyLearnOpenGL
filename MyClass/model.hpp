@@ -45,9 +45,9 @@ namespace wxy {
 	//private
 	void Model::LoadModel(const std::string& pathName) {
 		Assimp::Importer import;
-		// 将非三角形处理为三角形 | 反转纹理图像的 y 坐标 | 强制统一为 CCW 顺序
+		// 将非三角形处理为三角形 | 反转纹理图像的 y 坐标 | 强制统一为 CCW 顺序 | 自动计算 BT
 		const aiScene *assimpScene = import.ReadFile(pathName, 
-				aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_FlipWindingOrder); 
+				aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_FlipWindingOrder | aiProcess_CalcTangentSpace); 
 		// 只要有一个为假即判断为失败
 		if(!assimpScene || (assimpScene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !assimpScene->mRootNode)) {
 			std::cerr << "ASSIMP::ERROR::" << import.GetErrorString() << std::endl;
@@ -97,7 +97,12 @@ namespace wxy {
 				vertex._texCoord = vec2Temp;
 			}
 			else {vertex._texCoord = {0.f, 0.f};}
-
+			// T 的 下标直接与顶点对应
+			// 考虑现在模型大多是动态,因此在导入前就完成正交化必要性不大, 渲染时还是得重新计算
+			vec3Temp.x = assimpMesh->mTangents[i].x;
+			vec3Temp.y = assimpMesh->mTangents[i].y;
+			vec3Temp.z = assimpMesh->mTangents[i].z;
+			vertex._tangent = vec3Temp;
 			vertices.push_back(vertex);
 		}
 		// 每个 mesh 会有多个索引, 其实就是顶点索引, 指定了由哪几个点组成当前face
@@ -122,6 +127,11 @@ namespace wxy {
 			// 因而下面虽然纹理类型是 aiTextureType_AMBIENT, 但实际加载的是反射纹理
 			std::vector<Texture> texesReflection = loadMaterialTextures(assimpMaterial, aiTextureType_AMBIENT, "textureReflection");
 			textures.insert(textures.end(),  texesReflection.begin(), texesReflection.end());
+
+			// 还是类似的原因, 作者的模型中的法线纹理不会被 Assimp 的 aiTextureType_NORMAL加载, 但是可以被 aiTextureType_HEIGHT 加载
+			// 因而下面的 aiTextureType_HEIGHT 实际加载的是 法线纹理
+			std::vector<Texture> texesNormal = loadMaterialTextures(assimpMaterial, aiTextureType_HEIGHT, "textureNormal");
+			textures.insert(textures.end(),  texesNormal.begin(), texesNormal.end());
 		}
 		return Mesh{vertices, indices, textures};
 	}
