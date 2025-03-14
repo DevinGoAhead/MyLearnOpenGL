@@ -31,7 +31,7 @@ vec2 GetParaTexCoord(vec3 point2Camera) {
 	for(int i = 0; i < numLayer; ++i) {
 		if(curSampleDepth <= curLayerDepth) {
 			float prevSampleDepth = texture(uMaterial.textureHeight, prevTexCoord).r;
-			float t = (curLayerDepth  - curSampleDepth) / max(abs(prevSampleDepth - curSampleDepth), 0.0001);// 估算, 也没什么道理
+			float t = (curLayerDepth  - curSampleDepth) / max(abs(prevSampleDepth - (curLayerDepth - dLayerDepth)), 0.0001);// 估算, 也没什么道理
 			return mix(curTexCoord, prevTexCoord, t);
 		}
 		curLayerDepth += dLayerDepth;

@@ -105,15 +105,15 @@ int main()
 
 	GLuint quadTex;
 	setTexParameter(quadTex, GL_TEXTURE_2D, GL_REPEAT, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR);
-	GenerateTex("../resources/textures/bricks2.jpg", true);
+	GenerateTex("../resources/textures/toy_box_diffuse.png", true);
 
 	GLuint quadNorTex; //法线纹理
 	setTexParameter(quadNorTex, GL_TEXTURE_2D, GL_REPEAT, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR);
-	GenerateTex("../resources/textures/bricks2_normal.jpg",false);
+	GenerateTex("../resources/textures/toy_box_normal.png",false);
 
 	GLuint quadHeightTex; //法线纹理
 	setTexParameter(quadHeightTex, GL_TEXTURE_2D, GL_REPEAT, GL_LINEAR, GL_LINEAR);
-	GenerateTex("../resources/textures/bricks2_disp.jpg",false);
+	GenerateTex("../resources/textures/toy_box_disp.png",false);
 
 	wxy::ShaderProgram shaderPrgmModel("./shader/model.vert", "./shader/model.frag");
 	
@@ -181,7 +181,7 @@ int main()
 		shaderPrgmModel.SetUniformv("uN", normal);
 		shaderPrgmModel.SetUniformv("uView", view);
 		shaderPrgmModel.SetUniformv("uProjection", projection);
-		glm::mat4 model = glm::rotate(glm::mat4(1.f), glm::radians(curTime) * 10.f, glm::vec3(0.f, 1.f, 0.f));
+		glm::mat4 model = glm::rotate(glm::mat4(1.f), glm::radians(0.f) * 10.f, glm::vec3(0.f, 1.f, 0.f));
 		shaderPrgmModel.SetUniformv("uModel", model);
 		
 		glBindVertexArray(quadVAO);
