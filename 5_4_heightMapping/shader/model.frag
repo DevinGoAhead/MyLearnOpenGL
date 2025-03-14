@@ -19,15 +19,25 @@ uniform Material uMaterial;
 uniform float uScale; //偏移比例系数
 
 vec2 GetParaTexCoord(vec3 point2Camera) {
-	float depth = texture(uMaterial.textureHeight, fIn.texCoord).r; // 当前点采样深度值
-	// 以下 两行代码是后加的, 否则砖缝扭曲很严重
-	// 
-	depth = depth * 2.0 - 1.0;  // 将 [0,1] 映射到 [-1,1][凸起, 凹陷]
-	depth *= 0.1;           // 乘上一个适当的缩放因子
-	// viewDir 在UV平面的分量控制 offset 的方向, depth 控制偏移值
-	// uScale控制 为偏移提供一个固定的全局的比例系数(缩小), point2Camera.z 则会根据视角倾斜角度控制偏移的倍乘系数(扩大)
-	vec2 offSet = point2Camera.xy * depth * uScale / point2Camera.z;
-	return fIn.texCoord - offSet;
+	float maxNumLayer = 64.f, minNumLayer = 16.f;
+	// 越水平, 夹角越大, 比例值越小, 1-比例值越大,maxNumLayer占比越大
+	int numLayer = int(mix(maxNumLayer, minNumLayer, abs(dot(vec3(0.f, 0.f, 1.f), point2Camera))));
+	float dLayerDepth = 1.f / numLayer; //层深度递增布局
+	vec2 dTexCoord = point2Camera.xy * dLayerDepth  * uScale; // 纹理递增(递减)歩距
+	
+	float curLayerDepth = 0.f;
+	vec2 curTexCoord = fIn.texCoord, prevTexCoord = curTexCoord;
+	float curSampleDepth = texture(uMaterial.textureHeight, curTexCoord).r; // 当前点采样深度值
+	for(int i = 0; i < numLayer; ++i) {
+		if(curSampleDepth <= curLayerDepth) {
+			float prevSampleDepth = texture(uMaterial.textureHeight, prevTexCoord).r;
+			float t = (curLayerDepth  - curSampleDepth) / max(abs(prevSampleDepth - curSampleDepth), 0.0001);// 估算, 也没什么道理
+			return mix(curTexCoord, prevTexCoord, t);
+		}
+		curLayerDepth += dLayerDepth;
+		prevTexCoord = curTexCoord;
+		curSampleDepth = texture(uMaterial.textureHeight, curTexCoord -= dTexCoord).r;
+	}
 }
 
 void main() {	
