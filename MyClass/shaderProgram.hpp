@@ -148,7 +148,10 @@ namespace wxy{
 		else if constexpr (std::is_same_v<T, glm::vec<3, float>>){glUniform3fv(uniformLocation, count, glm::value_ptr(value[0]));}
 		else if constexpr (std::is_same_v<T, glm::mat3>){glUniformMatrix3fv(uniformLocation, count, transpose, glm::value_ptr(value[0]));}
 		else if constexpr (std::is_same_v<T, glm::mat4>){glUniformMatrix4fv(uniformLocation, count, transpose, glm::value_ptr(value[0]));}
-	
+		else if constexpr (std::is_same_v<T, float>){glUniform1fv(uniformLocation, count, value);}
+		else {
+			static_assert(false, "SetUniformv Error!");
+		}
 	}
 
 	template<typename T>
