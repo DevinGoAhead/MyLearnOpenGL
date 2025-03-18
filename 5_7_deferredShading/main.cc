@@ -137,7 +137,7 @@ int main()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	wxy::ShaderProgram shaderPrgmGBuf("./shader/gBuffer.vert", "./shader/gBuffer.frag");
-	wxy::ShaderProgram shaderPrgmLight("./shader/light.vert", "./shader/light.frag");
+	wxy::ShaderProgram shaderPrgmLightCube("./shader/lightCube.vert", "./shader/lightCube.frag");
 	wxy::ShaderProgram shaderPrgmScreen("./shader/deferredShading.vert", "./shader/deferredShading.frag");
 	
 	wxy::Model nanosuit("../resources/objects/nanosuit/nanosuit.obj");
@@ -193,7 +193,7 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glDisable(GL_DEPTH_TEST);
 		glClearColor(0.1, 0.1,0.1, 1.f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		shaderPrgmScreen.Use();
 		shaderPrgmScreen.SetUniformv("uLightPositions", lightNr, lightPositions.data()); // 光位置
@@ -202,7 +202,7 @@ int main()
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, gPositionTex);
-		shaderPrgmScreen.SetUniform("uGBuffer.texturePostion", 0); // 法线
+		shaderPrgmScreen.SetUniform("uGBuffer.texturePosition", 0); // 法线
 
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, gNormalTex);
@@ -214,7 +214,21 @@ int main()
 
 		glBindVertexArray(quadVAO);
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-		
+		glEnable(GL_DEPTH_TEST);
+		shaderPrgmLightCube.Use();
+		shaderPrgmLightCube.SetUniformv("uView", view);
+		shaderPrgmLightCube.SetUniformv("uProjection", projection);
+	
+		for(int i = 0; i < lightNr; ++i) {
+			shaderPrgmLightCube.SetUniformv("uLightColor", lightColors[i]);
+
+			glm::mat4 lightModel = glm::translate(glm::mat4(1.f), lightPositions[i]);
+			lightModel = glm::scale(lightModel, glm::vec3(0.125f));
+			shaderPrgmLightCube.SetUniformv("uModel", lightModel);
+
+			glBindVertexArray(cubeVAO);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区
 		glfwPollEvents(); // 轮询 - glfw 与 窗口通信
 	}

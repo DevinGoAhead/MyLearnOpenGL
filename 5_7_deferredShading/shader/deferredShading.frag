@@ -1,7 +1,7 @@
 #version 330 core
 
 struct GBuffer {
-	sampler2D texturePostion;
+	sampler2D texturePosition;
 	sampler2D textureNormal;
 	sampler2D textureAlbedoSpec;
 };
@@ -16,7 +16,7 @@ uniform vec3 uCameraPos;
 uniform GBuffer uGBuffer;
 
 void main() {
-	vec3 position = texture(uGBuffer.texturePostion, vTexCoords).rgb;
+	vec3 position = texture(uGBuffer.texturePosition, vTexCoords).rgb;
 	vec3 normal = texture(uGBuffer.textureNormal, vTexCoords).rgb;
 	vec3 diffColorMaterial = texture(uGBuffer.textureAlbedoSpec, vTexCoords).rgb; 
 	float specIntensity = texture(uGBuffer.textureAlbedoSpec, vTexCoords).a; 
