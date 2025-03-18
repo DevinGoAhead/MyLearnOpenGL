@@ -9,6 +9,9 @@
 #include <vector>
 #include <random>
 #include <functional>
+#include <utility>
+#include <optional>
+#include <cmath>
 #include "../MyClass/shaderProgram.hpp"
 #include "../MyClass/camera.hpp"
 #include "../MyClass/model.hpp"
@@ -184,4 +187,24 @@ void GetError() {
 	}
 }
 
+std::optional<std::pair<float, float>> SolveQuadrantic(float a, float b, float c) {
+	std::optional<std::pair<float, float>> solution;
+	if(a == 0) return solution;
+	
+	float discr = sqrt(b * b - 4 * a * c);
+	
+	if(discr < 0) return solution;
+	else if(discr == 0.f) {
+		solution = std::make_pair(-0.5 * b /a, -0.5 * b /a);
+		return solution;
+	}
+	//避免灾难性消去
+	float q = (b > 0 ? -b - discr : -b + discr);
+	q /= 0.5;
+
+	float x1 = q / a, x2 = c / q;
+	if(x1 > x2) std::swap(x1, x2); // 确保 x2 总是最大值
+	solution = std::make_pair(x1, x2);
+	return solution;
+}
 #endif

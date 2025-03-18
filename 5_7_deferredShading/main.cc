@@ -145,15 +145,34 @@ int main()
 	// lighting info
 	std::random_device rd; // 随机数生成器, 用于提供随机数种子
 	std::mt19937 gen(rd()); // mt19937 类型对象
-	std::uniform_real_distribution<float> dist1(-5.f, 5.f);
+	std::uniform_real_distribution<float> dist1(-10.f, 10.f);
 	std::uniform_real_distribution<float> dist2(0.4f, 0.8f);
 
-	const int lightNr = 128;
+	const int lightNr = 512;
     std::vector<glm::vec3> lightPositions;
 	std::vector<glm::vec3> lightColors;
+	std::vector<float> lightRadius;
+	float a = 1.5f, b = 0.8f, c = 1.f; //衰减参数
+	
 	for(int i = 0; i < lightNr; ++i){
 		lightPositions.emplace_back(dist1(gen), dist1(gen), dist1(gen));
 		lightColors.emplace_back(dist2(gen), dist2(gen), dist2(gen));
+
+		//计算有效半径, 这里与示例代码一致, 认为 < 5 / 256 即忽略计算该光照的作用
+		float iMax = std::max(lightColors[i].z, std::max(lightColors[i].x, lightColors[i].y));
+		auto solution = SolveQuadrantic(a, b, c - iMax * 256 / 5);
+		if(solution) {
+			float x = solution.value().second > 0.f;
+			if(x > 0.f) lightRadius.push_back(x);
+			else {
+				std::cout << "SolveQuadrantic Error" << std::endl;
+				assert(false);
+			}
+		}
+		else {
+			std::cout << "SolveQuadrantic Error" << std::endl;
+			assert(false);
+		}
 	}
 
 	// 让模型做一个随即旋转
@@ -198,7 +217,11 @@ int main()
 		shaderPrgmScreen.Use();
 		shaderPrgmScreen.SetUniformv("uLightPositions", lightNr, lightPositions.data()); // 光位置
 		shaderPrgmScreen.SetUniformv("uLightColors", lightNr, lightColors.data()); // 光强度
+		shaderPrgmScreen.SetUniformv("uLightRadius", lightNr, lightRadius.data()); // 光有效半径
 		shaderPrgmScreen.SetUniformv("uCameraPos", camera.GetPos());
+		shaderPrgmScreen.SetUniform("uAttenuation.a", a);
+		shaderPrgmScreen.SetUniform("uAttenuation.b", b);
+		shaderPrgmScreen.SetUniform("uAttenuation.c", c);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, gPositionTex);
@@ -214,7 +237,16 @@ int main()
 
 		glBindVertexArray(quadVAO);
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+		//light Cube
 		glEnable(GL_DEPTH_TEST);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, gFBO); // 读取
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // 写入
+		glBlitFramebuffer(0, 0, wndWidth, wndHeight,
+						0, 0, wndWidth, wndHeight, 
+						GL_DEPTH_BUFFER_BIT, GL_NEAREST); // 仅拷贝深度缓冲即可
+		glBindFramebuffer(GL_FRAMEBUFFER, 0); // 绑定默认帧缓冲
+		
 		shaderPrgmLightCube.Use();
 		shaderPrgmLightCube.SetUniformv("uView", view);
 		shaderPrgmLightCube.SetUniformv("uProjection", projection);

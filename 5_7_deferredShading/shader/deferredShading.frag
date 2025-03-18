@@ -6,14 +6,23 @@ struct GBuffer {
 	sampler2D textureAlbedoSpec;
 };
 
+struct Attenuation {
+	float a; // 二次项
+	float b; // 一次项
+	float c; // 常数项
+};
+
 in vec2 vTexCoords;
 out vec4 fColor;
 
-const int lightNr = 64;
+const int lightNr = 512;
 uniform vec3 uLightPositions[lightNr];
 uniform vec3 uLightColors[lightNr];
+uniform float uLightRadius[lightNr];
 uniform vec3 uCameraPos;
 uniform GBuffer uGBuffer;
+uniform Attenuation uAttenuation;
+
 
 void main() {
 	vec3 position = texture(uGBuffer.texturePosition, vTexCoords).rgb;
@@ -27,19 +36,22 @@ void main() {
 	for(int i = 0; i < lightNr ; ++i) {
 		vec3 posToLight = uLightPositions[i] - position;
 		float distancePos_Lit = length(posToLight);
-		float attenuation = 1.f / (1.f + 0.7 * distancePos_Lit  + 1.8 * distancePos_Lit * distancePos_Lit);
 
-		posToLight = normalize(posToLight);
-		
-		float diff = max(dot(posToLight, normal), 0.f);
-		vec3 resultDiff = diffColorMaterial * uLightColors[i] * diff * attenuation;
+		if(uLightRadius[i] < distancePos_Lit) {
+			float attenuation = 1.f / (uAttenuation.c + uAttenuation.b * distancePos_Lit  + uAttenuation.a * distancePos_Lit * distancePos_Lit);
 
-		vec3 bisector = normalize(posToCamera + posToLight);
-		float spec = pow(max(dot(bisector, normal), 0.f), 256);
-		vec3 resultSpec = uLightColors[i] * spec * specIntensity * attenuation;
+			posToLight = normalize(posToLight);
+			
+			float diff = max(dot(posToLight, normal), 0.f);
+			vec3 resultDiff = diffColorMaterial * uLightColors[i] * diff * attenuation;
 
-		colorResult += (resultDiff + resultSpec);
-		//colorResult += (resultDiff);
+			vec3 bisector = normalize(posToCamera + posToLight);
+			float spec = pow(max(dot(bisector, normal), 0.f), 256);
+			vec3 resultSpec = uLightColors[i] * spec * specIntensity * attenuation;
+
+			colorResult += (resultDiff + resultSpec);
+			//colorResult += (resultDiff);
+		}
 	}
 	colorResult = pow(colorResult, vec3(1.f / 2.2));
 	fColor = vec4(colorResult, 1.f); // 符合预期
