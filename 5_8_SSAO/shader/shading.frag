@@ -44,12 +44,12 @@ void main() {
 	vec3 colorDiff = diffColorMaterial * uLightColor * diff * attenuation;
 
 	vec3 bisector = normalize(posToCamera + posToLight);
-	float spec = pow(max(dot(bisector, normal), 0.f), 32);
-	vec3 colorSpec = uLightColor * spec * specIntensity * attenuation;
+	float spec = pow(max(dot(bisector, normal), 0.f), 8);
+	vec3 colorSpec = uLightColor * spec * attenuation; // 这里测试以下示例
 
 	vec3 colorResult = colorAmbient + colorDiff + colorSpec;
 	//vec3 colorResult = colorDiff + colorSpec;
 	colorResult = pow(colorResult, vec3(1.f / 2.2));
 	fColor = vec4(colorResult, 1.f);
-	//fColor = vec4(vec3(occlusion), 1.f);
+	//fColor = vec4(vec3(specIntensity), 1.f);
 }

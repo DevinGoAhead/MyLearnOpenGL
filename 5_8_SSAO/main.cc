@@ -154,10 +154,10 @@ int main()
 	glGenFramebuffers(1, &ssaoBlurFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFBO);
 	
-	// 颜色缓冲-SSAO 模糊后的颜色, 仍然是单通道颜色
+	// 颜色缓冲-SSAO 模糊后的颜色, 仍然是单通道颜色 + spec intensity
 	uint ssaoBlurTex;
 	setTexParameter(ssaoBlurTex, GL_TEXTURE_2D, GL_CLAMP_TO_EDGE, GL_NEAREST, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, wndWidth, wndHeight, 0, GL_RED, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG, wndWidth, wndHeight, 0, GL_RG, GL_FLOAT, NULL);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, ssaoBlurTex, 0);
 
 	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -168,7 +168,7 @@ int main()
 
 	wxy::ShaderProgram shaderPrgmGBuf("./shader/gBuffer.vert", "./shader/gBuffer.frag");
 	wxy::ShaderProgram shaderPrgmSSAO("./shader/quad.vert", "./shader/ssao.frag");
-	//wxy::ShaderProgram shaderPrgmSSAOBlur("./shader/quad.vert", "./shader/ssaoBlur.frag");
+	wxy::ShaderProgram shaderPrgmSSAOBlur("./shader/quad.vert", "./shader/ssaoBlur.frag");
 	wxy::ShaderProgram shaderPrgmScreen("./shader/quad.vert", "./shader/shading.frag");
 	
 	wxy::Model nanosuit("../resources/objects/nanosuit/nanosuit.obj");
@@ -237,7 +237,7 @@ int main()
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 		
 		// nanosuit
-		model = glm::translate(glm::mat4(1.f),glm::vec3(0.f, 0.4f, 5.f));
+		model = glm::translate(glm::mat4(1.f),glm::vec3(0.f, 0.8f, 5.f));
 		model = glm::rotate(model, glm::radians(90.f), glm::vec3(-1.f, 0.f, 0.f));
 		model = glm::scale( model, glm::vec3(0.5));
 		
@@ -254,7 +254,7 @@ int main()
 		shaderPrgmSSAO.SetUniform("uWndWidth", wndWidth);
 		shaderPrgmSSAO.SetUniform("uWndHeight", wndHeight);
 		shaderPrgmSSAO.SetUniform("uRadius", 0.5f);
-		shaderPrgmSSAO.SetUniform("uBias", 0.02f);
+		shaderPrgmSSAO.SetUniform("uBias", 0.03f);
 		shaderPrgmSSAO.SetUniformv("uSamples", 64, samples.data());
 		shaderPrgmSSAO.SetUniformv("uProjection", projection);
 
@@ -288,7 +288,8 @@ int main()
 		shaderPrgmScreen.SetUniform("uGBuffer.textureNormal", 1); // 法线
 
 		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, gAlbedoSpecTex);
+		//glBindTexture(GL_TEXTURE_2D, gAlbedoSpecTex);
+		glBindTexture(GL_TEXTURE_2D, ssaoBlurTex);
 		shaderPrgmScreen.SetUniform("uGBuffer.textureAlbedoSpec", 2); // 材质颜色 + 镜面反反射强度
 
 		glActiveTexture(GL_TEXTURE3);
