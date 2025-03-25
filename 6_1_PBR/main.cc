@@ -29,21 +29,98 @@ int main()
 	glfwSetCursorPosCallback(pWindow, cursor_callback);// 注册光标捕捉函数
 	glfwSetScrollCallback(pWindow, scroll_callback);// 注册滚轮捕捉函数
 
+	// 创建纹理对象
+	auto setTexParameter = [](GLuint& tex, GLenum target, GLint wrappingParam, GLint magFilterParam, GLint minFilterParam){
+		glGenTextures(1, &tex);
+		glBindTexture(target, tex);
+		// 设置纹理环绕参数
+		if(wrappingParam != -1) {
+			glTexParameteri(target, GL_TEXTURE_WRAP_S, wrappingParam);
+			glTexParameteri(target, GL_TEXTURE_WRAP_T, wrappingParam);
+			if(target == GL_TEXTURE_CUBE_MAP) glTexParameteri(target, GL_TEXTURE_WRAP_R, wrappingParam);
+
+			if(wrappingParam == GL_CLAMP_TO_BORDER) {
+				GLfloat borderColor[] ={1.0f, 1.0f, 1.0f, 1.0f};
+				glTexParameterfv(target, GL_TEXTURE_BORDER_COLOR, borderColor);
+			}
+		}
+		// 设置纹理映射(过滤)方式
+		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, magFilterParam); // 放大
+		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, minFilterParam); // 缩小
+	};
+
+	auto GenerateTex = [](const char* pathName, bool isGammaCorrect){
+		// 加载纹理
+		int imageWidth, imageHeight, nChannels;
+		unsigned char* pImageData = stbi_load(pathName, &imageWidth, &imageHeight, &nChannels, 0);
+		if(!pImageData) 
+		{
+			std::cerr << "failed to load Image" << '\n';
+			exit(1);
+		}
+
+		GLint internalFormat;
+		GLint format;
+		
+		if(nChannels == 4) {
+			internalFormat = isGammaCorrect ?  GL_SRGB_ALPHA : GL_RGBA;
+			format = GL_RGBA;
+		}
+		else if(nChannels == 3){
+			internalFormat = isGammaCorrect ?  GL_SRGB : GL_RGB;
+			format = GL_RGB;
+		}
+		else if(nChannels == 1){
+			internalFormat = GL_RED;
+			format = GL_RED;
+		}
+
+		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, imageWidth, imageHeight, 0, format, GL_UNSIGNED_BYTE, pImageData); // 开辟内存, 存储图片
+		glGenerateMipmap(GL_TEXTURE_2D);
+		stbi_image_free(pImageData);
+	};
+
+	uint albedoTex;
+	setTexParameter(albedoTex, GL_TEXTURE_2D, GL_REPEAT, GL_LINEAR,  GL_LINEAR);
+	GenerateTex("../resources/textures/pbr/rusted_iron/albedo.png", true);
+
+	uint normalTex;
+	setTexParameter(normalTex, GL_TEXTURE_2D, GL_REPEAT, GL_LINEAR,  GL_LINEAR);
+	GenerateTex("../resources/textures/pbr/rusted_iron/normal.png", false);
+
+	uint metalnessTex;
+	setTexParameter(metalnessTex, GL_TEXTURE_2D, GL_REPEAT, GL_LINEAR,  GL_LINEAR);
+	GenerateTex("../resources/textures/pbr/rusted_iron/metallic.png", false);// 原始数据在线性空间
+
+	uint roughnessTex;
+	setTexParameter(roughnessTex, GL_TEXTURE_2D, GL_REPEAT, GL_LINEAR,  GL_LINEAR);
+	GenerateTex("../resources/textures/pbr/rusted_iron/roughness.png", false); // 原始数据在线性空间
+
+	uint aoTex;
+	setTexParameter(aoTex, GL_TEXTURE_2D, GL_CLAMP_TO_EDGE, GL_LINEAR,  GL_LINEAR);
+	GenerateTex("../resources/textures/pbr/rusted_iron/ao.png", true);
+
 	wxy::Sphere sphere;
 	wxy::ShaderProgram shaderPrgmPBR("./shader/pbr.vs", "./shader/pbr.fs");
 
 	// lights
-	std::vector <glm::vec3> lightPositions {
-		{-10.0f,  10.0f, 10.0f},
-		{ 10.0f,  10.0f, 10.0f},
-		{-10.0f, -10.0f, 10.0f},
-		{ 10.0f, -10.0f, 10.0f}
+	// std::vector <glm::vec3> lightPositions {
+	// 	{-10.0f,  10.0f, 10.0f},
+	// 	{ 10.0f,  10.0f, 10.0f},
+	// 	{-10.0f, -10.0f, 10.0f},
+	// 	{ 10.0f, -10.0f, 10.0f}
+	// };
+	std::vector <glm::vec3> lightPositions { // 测试示例效果
+		{0.f, 0.f, 10.0f},
+		{0.f, 0.f, 10.0f},
+		{0.f, 0.f, 10.0f},
+		{0.f, 0.f, 10.0f}
 	};
 	std::vector <glm::vec3> lightColors {
-		{300.0f, 300.0f, 300.0f},
-		{300.0f, 300.0f, 300.0f},
-		{300.0f, 300.0f, 300.0f},
-		{300.0f, 300.0f, 300.0f}
+		{150.0f, 150.0f, 150.0f},
+		{150.0f, 150.0f, 150.0f},
+		{150.0f, 150.0f, 150.0f},
+		{150.0f, 150.0f, 150.0f}
 	};
 	int nrRows = 7;
 	int nrColumns = 7;
@@ -66,25 +143,34 @@ int main()
 		shaderPrgmPBR.Use();
 		shaderPrgmPBR.SetUniformv("uView", view);
 		shaderPrgmPBR.SetUniformv("uProjection", projection);
-		shaderPrgmPBR.SetUniform("uAO", 0.9);
-		shaderPrgmPBR.SetUniformv("uAlbedo", glm::vec3(0.5f, 0.0f, 0.0f));
 		shaderPrgmPBR.SetUniformv("uF0", glm::vec3(0.04)); //基础反射率
 		shaderPrgmPBR.SetUniformv("uCameraPosition", camera.GetPos());
 		shaderPrgmPBR.SetUniformv("uLightColors", 4, lightColors.data());
+		shaderPrgmPBR.SetUniformv("uLightPositions", 4, lightPositions.data());
 
-		// 光源可视化
-		for(int i = 0; i < 4; ++i) {
-			glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(curTime * 5.f)  * 5.f, 0.f, 0.f);
-			shaderPrgmPBR.SetUniformv(("uLightPositions[" + std::to_string(i) + "]").c_str(), newPos);
-			glm::mat4 model = glm::translate(glm::mat4(1.f), newPos);
-			shaderPrgmPBR.SetUniformv("uModel", model);
-			sphere.Draw();
-		}
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, albedoTex);
+		shaderPrgmPBR.SetUniform("uAlbedo", 0);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, roughnessTex);
+		shaderPrgmPBR.SetUniform("uRoughness", 1);
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, metalnessTex);
+		shaderPrgmPBR.SetUniform("uMetalness", 2);
+
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, aoTex);
+		shaderPrgmPBR.SetUniform("uAO", 3);
+
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, normalTex);
+		shaderPrgmPBR.SetUniform("uNormal", 4);
+
 		// draw sphere
 		for(int iRow = 0; iRow < nrRows; ++iRow) {
-			shaderPrgmPBR.SetUniform("uMetalness", (float)iRow / nrRows);
 			for(int iCol = 0; iCol < nrColumns; ++iCol) {
-				shaderPrgmPBR.SetUniform("uRoughness", glm::clamp((float)iCol / nrColumns, 0.05f, 1.f));
 				//glm::mat4 model = glm::translate(glm::mat4(1.f), glm::vec3(iRow, iCol, 0) * spacing);
 				glm::mat4 model = glm::translate(glm::mat4(1.f), 
 							glm::vec3(iRow - nrRows / 2.f, iCol - nrColumns / 2.f, 0) * spacing); // 示例代码布局, 由中心向四周扩散
@@ -92,7 +178,6 @@ int main()
 				sphere.Draw();
 			}
 		}
-
 
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区
 		glfwPollEvents(); // 轮询 - glfw 与 窗口通信
