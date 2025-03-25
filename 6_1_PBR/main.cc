@@ -70,22 +70,24 @@ int main()
 		shaderPrgmPBR.SetUniformv("uAlbedo", glm::vec3(0.5f, 0.0f, 0.0f));
 		shaderPrgmPBR.SetUniformv("uF0", glm::vec3(0.04)); //基础反射率
 		shaderPrgmPBR.SetUniformv("uCameraPosition", camera.GetPos());
-		shaderPrgmPBR.SetUniformv("uLightPositions", 4, lightPositions.data());
 		shaderPrgmPBR.SetUniformv("uLightColors", 4, lightColors.data());
 
-		// // 光源可视化
-		// for(int i = 0; i < 4; ++i) {
-		// 	glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(curTime * 5.f)  * 5.f, 0.f, 0.f);
-		// 	shaderPrgmPBR.SetUniformv(("uLightPositions[" + std::to_string(i) + "]").c_str(), newPos);
-		// 	glm::mat4 model = glm::translate(glm::mat4(1.f), newPos);
-		// }
-
+		// 光源可视化
+		for(int i = 0; i < 4; ++i) {
+			glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(curTime * 5.f)  * 5.f, 0.f, 0.f);
+			shaderPrgmPBR.SetUniformv(("uLightPositions[" + std::to_string(i) + "]").c_str(), newPos);
+			glm::mat4 model = glm::translate(glm::mat4(1.f), newPos);
+			shaderPrgmPBR.SetUniformv("uModel", model);
+			sphere.Draw();
+		}
 		// draw sphere
 		for(int iRow = 0; iRow < nrRows; ++iRow) {
 			shaderPrgmPBR.SetUniform("uMetalness", (float)iRow / nrRows);
 			for(int iCol = 0; iCol < nrColumns; ++iCol) {
 				shaderPrgmPBR.SetUniform("uRoughness", glm::clamp((float)iCol / nrColumns, 0.05f, 1.f));
-				glm::mat4 model = glm::translate(glm::mat4(1.f), glm::vec3(iRow, iCol, 0) * spacing);
+				//glm::mat4 model = glm::translate(glm::mat4(1.f), glm::vec3(iRow, iCol, 0) * spacing);
+				glm::mat4 model = glm::translate(glm::mat4(1.f), 
+							glm::vec3(iRow - nrRows / 2.f, iCol - nrColumns / 2.f, 0) * spacing); // 示例代码布局, 由中心向四周扩散
 				shaderPrgmPBR.SetUniformv("uModel", model);
 				sphere.Draw();
 			}

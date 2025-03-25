@@ -78,7 +78,7 @@ void main() {
 	for(int i = 0; i < 4; ++i) {
 		vec3 posToLight = uLightPositions[i] - fIn.pos;
 		float lenPosToLight = length( posToLight);
-		float attenuation = 1.f / (1.f + 0.09 * lenPosToLight + 0.032 * lenPosToLight* lenPosToLight); // 一个简单的衰减
+		float attenuation = 1.f / (1.f + 0.35 * lenPosToLight + 0.44 * lenPosToLight* lenPosToLight); // 一个简单的衰减
 		posToLight = normalize(posToLight);
 
 		vec3 incidentRadiance =  uLightColors[i] * attenuation;
