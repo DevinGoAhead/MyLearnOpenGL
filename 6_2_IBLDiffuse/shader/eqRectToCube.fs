@@ -1,7 +1,7 @@
 #version 330 core
 
 in vec3 vPosWd;
-out vec4 fColor;
+out vec3 fColor;
 
 uniform sampler2D uTextureEqRect;
 
@@ -19,7 +19,5 @@ vec2 EqRectToCube(vec3 posCube) {
 }
 
 void main(){
-	vec3 irrradiance = texture(uTextureEqRect, EqRectToCube(normalize(vPosWd))).rgb; // 坐标必须归一化, 对应到单位球的经纬度
-	//irrradiance = vec3(0.8, 0.5, 0.3); // 测试
-	fColor = vec4(irrradiance, 1.f);
+	fColor = texture(uTextureEqRect, EqRectToCube(normalize(vPosWd))).rgb; // 坐标必须归一化, 对应到单位球的经纬度
 }

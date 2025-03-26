@@ -8,6 +8,6 @@ uniform mat4 uView;
 uniform mat4 uProjection;
 
 void main() {
-	vPosWd = aPos; // 这里就是让cube 在场景中心, 测试而已
+	vPosWd = aPos; // 这里 cube 就是世界
 	gl_Position = uProjection *  uView * vec4(aPos, 1.f);
 }

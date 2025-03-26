@@ -144,9 +144,40 @@ int main()
 	glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB16F, imageWidth, imageHeight, 0, GL_RGB, GL_FLOAT, pImageData); // 开辟内存, 存储图片
 	stbi_image_free(pImageData);
 
+	//envCubeFBO
+	uint envCubeFBO;
+	int ecFBOWidth = 512, ecFBOHeight = 512;
+	glGenFramebuffers(1, &envCubeFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, envCubeFBO);
+	
+	uint envCubeTex;
+	setTexParameter(envCubeTex, GL_TEXTURE_CUBE_MAP, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
+	for(int i = 0; i < 6; ++i) {
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, ecFBOWidth, ecFBOHeight, 0, GL_RGB, GL_FLOAT, NULL);
+	}
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, envCubeTex, 0);
+
+	// 为cube 构造投影矩阵, 同时为每个面构造视图矩阵, 摄像机一直在中心, 旋转切换方向
+	glm::mat4 ecProjection = glm::perspective(glm::radians(90.f), (float)ecFBOWidth / ecFBOHeight, 0.1f, 10.f); // fov-90 确保能看到所有内容
+	std::vector<glm::mat4> ecViews {
+		glm::lookAt(glm::vec3(0.f), glm::vec3(1.f, 0.f, 0.f), glm::vec3(0.f, -1.f, 0.f)),
+		glm::lookAt(glm::vec3(0.f), glm::vec3(-1.f, 0.f, 0.f), glm::vec3(0.f, -1.f, 0.f)),
+		glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f, 0.f, 1.f)),
+		glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.f, 0.f, -1.f)),
+		glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, -1.f, 0.f)),
+		glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, -1.f, 0.f))
+	};
+
+	uint envCubeRBO;
+	glGenRenderbuffers(1, &envCubeRBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, envCubeRBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, ecFBOWidth, ecFBOHeight);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_COMPONENT24, GL_RENDERBUFFER, envCubeRBO);
+
 	wxy::Sphere sphere;
 	wxy::ShaderProgram shaderPrgmPBR("./shader/pbr.vs", "./shader/pbr.fs");
-	wxy::ShaderProgram shaderPrgmCube("./shader/cube.vs", "./shader/eqRectToCube.fs");
+	wxy::ShaderProgram shaderPrgmEqRectToCube("./shader/eqRectToCube.vs", "./shader/eqRectToCube.fs");
+	wxy::ShaderProgram shaderPrgmCubeMap("./shader/cubeMap.vs", "./shader/cubeMap.fs");
 
 	//lights
 	std::vector <glm::vec3> lightPositions {
@@ -167,6 +198,7 @@ int main()
 
 	// 主循环
 	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
 	glfwSwapInterval(1); // 前后缓冲区交换间隔
 	while(!glfwWindowShouldClose(pWindow)) {
 		curTime = glfwGetTime();
@@ -179,14 +211,37 @@ int main()
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.GetFov()), (float)wndWidth / wndHeight, 0.1f, 100.f);
 
-		// draw cube
-		shaderPrgmCube.Use();
-		shaderPrgmCube.SetUniformv("uProjection",projection);
-		shaderPrgmCube.SetUniformv("uView", view);
+		// create cube map textue
+		glBindFramebuffer(GL_FRAMEBUFFER, envCubeFBO);
+		glViewport(0, 0, ecFBOWidth, ecFBOHeight);
+
+		shaderPrgmEqRectToCube.Use();
+		shaderPrgmEqRectToCube.SetUniformv("uProjection", ecProjection);
 		
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, envHDRTex);
-		shaderPrgmCube.SetUniform("uTextureEqRect", 0);
+		shaderPrgmEqRectToCube.SetUniform("uTextureEqRect", 0);
+		
+		glBindVertexArray(cubeVAO);
+		for(int i = 0; i < 6; ++i) {
+			shaderPrgmEqRectToCube.SetUniformv("uView", ecViews[i]);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, envCubeTex, 0);
+			glClear(GL_COLOR_BUFFER_BIT);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
+
+		// draw background
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, wndWidth, wndHeight);
+
+		shaderPrgmCubeMap.Use();
+		shaderPrgmCubeMap.SetUniformv("uView", view);
+		shaderPrgmCubeMap.SetUniformv("uProjection", projection);
+		
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, envCubeTex);
+		shaderPrgmCubeMap.SetUniform("uTextureCube", 0);
+		
 		glBindVertexArray(cubeVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
