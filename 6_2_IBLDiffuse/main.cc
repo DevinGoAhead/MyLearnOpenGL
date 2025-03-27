@@ -76,58 +76,6 @@ int main()
 		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, minFilterParam); // 缩小
 	};
 
-	auto GenerateTex = [](const char* pathName, bool isGammaCorrect, bool isFlip = false){
-		stbi_set_flip_vertically_on_load(isFlip); // 是否翻转
-		
-		// 加载纹理
-		int imageWidth, imageHeight, nChannels;
-		unsigned char* pImageData = stbi_load(pathName, &imageWidth, &imageHeight, &nChannels, 0);
-		if(!pImageData) {
-			std::cerr << "failed to load Image" << '\n';
-			exit(1);
-		}
-
-		GLint internalFormat;
-		GLint format;
-		
-		if(nChannels == 4) {
-			internalFormat = isGammaCorrect ?  GL_SRGB_ALPHA : GL_RGBA;
-			format = GL_RGBA;
-		}
-		else if(nChannels == 3){
-			internalFormat = isGammaCorrect ?  GL_SRGB : GL_RGB;
-			format = GL_RGB;
-		}
-		else if(nChannels == 1){
-			internalFormat = GL_RED;
-			format = GL_RED;
-		}
-
-		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, imageWidth, imageHeight, 0, format, GL_UNSIGNED_BYTE, pImageData); // 开辟内存, 存储图片
-		glGenerateMipmap(GL_TEXTURE_2D);
-		stbi_image_free(pImageData);
-	};
-
-	uint albedoTex;
-	setTexParameter(albedoTex, GL_TEXTURE_2D, GL_REPEAT, GL_LINEAR,  GL_LINEAR);
-	GenerateTex("../resources/textures/pbr/rusted_iron/albedo.png", true);
-
-	uint normalTex;
-	setTexParameter(normalTex, GL_TEXTURE_2D, GL_REPEAT, GL_LINEAR,  GL_LINEAR);
-	GenerateTex("../resources/textures/pbr/rusted_iron/normal.png", false);
-
-	uint metalnessTex;
-	setTexParameter(metalnessTex, GL_TEXTURE_2D, GL_REPEAT, GL_LINEAR,  GL_LINEAR);
-	GenerateTex("../resources/textures/pbr/rusted_iron/metallic.png", false);// 原始数据在线性空间
-
-	uint roughnessTex;
-	setTexParameter(roughnessTex, GL_TEXTURE_2D, GL_REPEAT, GL_LINEAR,  GL_LINEAR);
-	GenerateTex("../resources/textures/pbr/rusted_iron/roughness.png", false); // 原始数据在线性空间
-
-	uint aoTex;
-	setTexParameter(aoTex, GL_TEXTURE_2D, GL_CLAMP_TO_EDGE, GL_LINEAR,  GL_LINEAR);
-	GenerateTex("../resources/textures/pbr/rusted_iron/ao.png", true);
-
 	// env 纹理
 	uint envHDRTex;
 	setTexParameter(envHDRTex, GL_TEXTURE_2D, GL_CLAMP_TO_EDGE, GL_LINEAR,  GL_LINEAR);
@@ -144,9 +92,9 @@ int main()
 	glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB16F, imageWidth, imageHeight, 0, GL_RGB, GL_FLOAT, pImageData); // 开辟内存, 存储图片
 	stbi_image_free(pImageData);
 
-	//envCubeFBO
+	//envCubeFBO, 将环境贴图从等距柱状投影图采样到 cube map 中
 	uint envCubeFBO;
-	int ecFBOWidth = 512, ecFBOHeight = 512;
+	int ecFBOWidth = 1024, ecFBOHeight = ecFBOWidth;
 	glGenFramebuffers(1, &envCubeFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, envCubeFBO);
 	
@@ -156,8 +104,32 @@ int main()
 		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, ecFBOWidth, ecFBOHeight, 0, GL_RGB, GL_FLOAT, NULL);
 	}
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, envCubeTex, 0);
+	// 去掉了RBO, 不需要深度测试
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		std::cout << "envCubeFBO is not complete!" << std::endl;
+	}
+
+
+	// 采样环境立方体贴图, 预计算 irradiance, 存储到
+	uint irradianceCubeFBO;
+	int icFBOWidth = 32, icFBOHeight = icFBOWidth;
+	glGenFramebuffers(1, & irradianceCubeFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER,  irradianceCubeFBO);
+	
+	uint irradianceCubeTex;
+	setTexParameter(irradianceCubeTex, GL_TEXTURE_CUBE_MAP, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
+	for(int i = 0; i < 6; ++i) {
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, icFBOWidth, icFBOHeight, 0, GL_RGB, GL_FLOAT, NULL);
+	}
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, irradianceCubeTex, 0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		std::cout << "irradianceCubeFBO is not complete!" << std::endl;
+	}
 
 	// 为cube 构造投影矩阵, 同时为每个面构造视图矩阵, 摄像机一直在中心, 旋转切换方向
+	// 两个立方体纹理共用
 	glm::mat4 ecProjection = glm::perspective(glm::radians(90.f), (float)ecFBOWidth / ecFBOHeight, 0.1f, 10.f); // fov-90 确保能看到所有内容
 	std::vector<glm::mat4> ecViews {
 		glm::lookAt(glm::vec3(0.f), glm::vec3(1.f, 0.f, 0.f), glm::vec3(0.f, -1.f, 0.f)),
@@ -168,15 +140,10 @@ int main()
 		glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, -1.f, 0.f))
 	};
 
-	uint envCubeRBO;
-	glGenRenderbuffers(1, &envCubeRBO);
-	glBindRenderbuffer(GL_RENDERBUFFER, envCubeRBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, ecFBOWidth, ecFBOHeight);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_COMPONENT24, GL_RENDERBUFFER, envCubeRBO);
-
 	wxy::Sphere sphere;
 	wxy::ShaderProgram shaderPrgmPBR("./shader/pbr.vs", "./shader/pbr.fs");
-	wxy::ShaderProgram shaderPrgmEqRectToCube("./shader/eqRectToCube.vs", "./shader/eqRectToCube.fs");
+	wxy::ShaderProgram shaderPrgmEqRectToCube("./shader/cube.vs", "./shader/eqRectToCube.fs");
+	wxy::ShaderProgram shaderPrgmIrradianceMap("./shader/cube.vs", "./shader/irradianceMap.fs");
 	wxy::ShaderProgram shaderPrgmCubeMap("./shader/cubeMap.vs", "./shader/cubeMap.fs");
 
 	//lights
@@ -230,6 +197,25 @@ int main()
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 
+		// convolution irradiance
+		glBindFramebuffer(GL_FRAMEBUFFER,  irradianceCubeFBO);
+		glViewport(0, 0, icFBOWidth, icFBOHeight);
+
+		shaderPrgmIrradianceMap.Use();
+		shaderPrgmIrradianceMap.SetUniformv("uProjection", ecProjection);
+		
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, envCubeTex);
+		shaderPrgmIrradianceMap.SetUniform("uTextureCube", 0);
+		
+		glBindVertexArray(cubeVAO);
+		for(int i = 0; i < 6; ++i) {
+			shaderPrgmEqRectToCube.SetUniformv("uView", ecViews[i]);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, irradianceCubeTex, 0);
+			glClear(GL_COLOR_BUFFER_BIT);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
+
 		// draw background
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, wndWidth, wndHeight);
@@ -254,32 +240,21 @@ int main()
 		shaderPrgmPBR.SetUniformv("uLightColors", 4, lightColors.data());
 		shaderPrgmPBR.SetUniformv("uLightPositions", 4, lightPositions.data());
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, albedoTex);
-		shaderPrgmPBR.SetUniform("uAlbedo", 0);
+		shaderPrgmPBR.SetUniform("uAO", 0.9f);
+		shaderPrgmPBR.SetUniformv("uAlbedo", glm::vec3(0.5f, 0.0f, 0.0f));
 
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, roughnessTex);
-		shaderPrgmPBR.SetUniform("uRoughness", 1);
-
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, metalnessTex);
-		shaderPrgmPBR.SetUniform("uMetalness", 2);
-
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, aoTex);
-		shaderPrgmPBR.SetUniform("uAO", 3);
-
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, normalTex);
-		shaderPrgmPBR.SetUniform("uNormal", 4);
+		// glActiveTexture(GL_TEXTURE0);
+		// glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceCubeTex);
+		// shaderPrgmPBR.SetUniform("uTextureCube", 0);
 
 		// draw sphere
 		for(int iRow = 0; iRow < nrRows; ++iRow) {
+			shaderPrgmPBR.SetUniform("uMetalness", (float)iRow / nrRows);
 			for(int iCol = 0; iCol < nrColumns; ++iCol) {
 				//glm::mat4 model = glm::translate(glm::mat4(1.f), glm::vec3(iRow, iCol, 0) * spacing);
 				glm::mat4 model = glm::translate(glm::mat4(1.f), 
-							glm::vec3(iRow - nrRows / 2.f, iCol - nrColumns / 2.f, 0) * spacing); // 示例代码布局, 由中心向四周扩散
+							glm::vec3( iCol - nrColumns / 2.f, iRow - nrRows / 2.f, -2 / spacing) * spacing); // 示例代码布局, 由中心向四周扩散
+				shaderPrgmPBR.SetUniform("uRoughness", glm::clamp((float)iCol / nrColumns, 0.05f, 1.f));
 				shaderPrgmPBR.SetUniformv("uModel", model);
 				sphere.Draw();
 			}
