@@ -243,9 +243,9 @@ int main()
 		shaderPrgmPBR.SetUniform("uAO", 0.9f);
 		shaderPrgmPBR.SetUniformv("uAlbedo", glm::vec3(0.5f, 0.0f, 0.0f));
 
-		// glActiveTexture(GL_TEXTURE0);
-		// glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceCubeTex);
-		// shaderPrgmPBR.SetUniform("uTextureCube", 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceCubeTex);
+		shaderPrgmPBR.SetUniform("uTextureCube", 0);
 
 		// draw sphere
 		for(int iRow = 0; iRow < nrRows; ++iRow) {
