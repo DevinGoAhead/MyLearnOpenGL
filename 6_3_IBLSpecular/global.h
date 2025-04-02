@@ -185,7 +185,7 @@ const char* filenames[6] = {
 };
 
 // 读取 Cube Map 纹理并保存为 PNG
-void saveCubemapToPNG(GLuint textureID, int mipLevel) {
+void saveCubemapToPNG(GLuint textureID, int mipLevel, std::string path) {
     glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
 
     // 获取纹理大小
@@ -194,7 +194,7 @@ void saveCubemapToPNG(GLuint textureID, int mipLevel) {
     glGetTexLevelParameteriv(GL_TEXTURE_CUBE_MAP_POSITIVE_X, mipLevel, GL_TEXTURE_HEIGHT, &height);
 
     if (width == 0 || height == 0) {
-        std::cerr << "错误：无法获取立方体贴图的尺寸！" << std::endl;
+        std::cerr << "size of  texture error!" << std::endl;
         return;
     }
 
@@ -204,11 +204,9 @@ void saveCubemapToPNG(GLuint textureID, int mipLevel) {
         glGetTexImage(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mipLevel, GL_RGB, GL_UNSIGNED_BYTE, data.data());
 
         // 使用 stb_image_write 保存为 PNG
-        if (!stbi_write_png(("./renderResult/mipLevel_" + std::to_string(mipLevel) + "_" + "face_" + std::to_string(i) + ".png").c_str(), 
+        if (!stbi_write_png((path + std::to_string(mipLevel) + "_" + "face_" + std::to_string(i) + ".png").c_str(), 
 		width, height, 3, data.data(), width * 3)) {
-            std::cerr << "错误：无法保存 " << std::endl;
-        } else {
-            std::cout << "已成功保存：" << std::endl;
+            std::cerr << "Error::stbi_write_png!" << std::endl;
         }
     }
 

@@ -4,8 +4,10 @@ in vec3 vPosWd;
 out vec3 fColor;
 uniform float uRoughness;
 uniform samplerCube uTextureCube;
+uniform int uResolution; // envCubeTex 的边长(长宽相等)
 
 float PI = 3.14159265358979;
+float Epsilon = 0.00001;
 
 //生成 Van Der Corput 低差异值, 生成的值是均匀的
 float RadicalInverse_VdC(uint bits) {
@@ -47,25 +49,46 @@ vec3 ImportanceSampleGGX(vec2 xi, float alpha, vec3 N) {
 	return mat3(T, B, N) * H; // 不必归一化
 }
 
+float D_GGXTR(float NdotH, float alpha) {
+	float numer = alpha * alpha; // 分子
+
+	// 分母
+	float denom = (NdotH * NdotH) * (numer * numer - 1.f) + 1.f;
+	denom = PI * denom * denom;
+	return numer / (denom + Epsilon);
+}
+
+float GetMipLevel(float alpha, float NdotH, float OdotH, uint nrSamples) {
+	float D = D_GGXTR(NdotH, alpha);
+	float pdf = (D * NdotH) / (4 * OdotH + Epsilon); // 当前采样方向的 pddf 值
+	float texelWeightToSdAg = 4 * PI / (6 * uResolution * uResolution); // 6个面, 覆盖 4π 球面度, 单个纹素覆盖的立体角范围
+	float sampleWeightToSdAg = 1.f / (nrSamples * (pdf + Epsilon)); // 单个样本覆盖的立体角范围
+	return uRoughness == 0.f ? 0 : 0.5f * log2(sampleWeightToSdAg / texelWeightToSdAg);
+}
+
 void main() {
 	vec3 N = normalize(vPosWd);
 	vec3 V = N; // 假设视线方向与法线同向
 	vec3 O = V; // 因为是镜面反射, 出射(反射)方向与视线同向,  否则无法被看到
 	float alpha = uRoughness * uRoughness;
-	uint nrSample = 1024u;
+	uint nrSamples = 1024u;
 	vec3 preFilterColor = vec3(0.f);
-	float weight = 0.000001f;
-	for(uint i = 0u; i < nrSample; ++i) {
-		vec2 xi = Hammersley(i, nrSample); //ξ
+	float weight = Epsilon;
+	float mipLevel = 0.f;
+	for(uint i = 0u; i < nrSamples; ++i) {
+		vec2 xi = Hammersley(i, nrSamples); //ξ
 		vec3 H = ImportanceSampleGGX(xi, alpha, N);
 		vec3 L = 2 * dot(H, V) * H - V; // V + L = 2 * dot(H, V)
+		float NdotH = dot(N, H);
+		float OdotH = dot(O, H);
+		float mipLevel = GetMipLevel(alpha, NdotH, OdotH, nrSamples);
 		float NdotL = dot(N, L);
 		// 完全看不懂 Σ((L(l_i) *  N·l_i) / Σ(N·l_i)) 是在做什么, 完全不合理, 物理的数学的都不合理
 		if(NdotL > 0) { // 避免采样到下半球
-			preFilterColor += texture(uTextureCube, L).rgb * NdotL;
+			preFilterColor += textureLod(uTextureCube, L, mipLevel).rgb * NdotL;
 			weight += NdotL;
 		}
 	}
-	
+	// fColor = vec3(0.f, mipLevel / 4.f, 0.f);
 	fColor = preFilterColor / weight;
 }

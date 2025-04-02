@@ -29,7 +29,6 @@ int main()
 	glfwSetCursorPosCallback(pWindow, cursor_callback);// 注册光标捕捉函数
 	glfwSetScrollCallback(pWindow, scroll_callback);// 注册滚轮捕捉函数
 
-
 	auto SetVertices = [](GLuint& VBO, const std::vector<float>& vertices){
 		glGenBuffers(1, &VBO);
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -99,7 +98,8 @@ int main()
 	glBindFramebuffer(GL_FRAMEBUFFER, envCubeFBO);
 	
 	uint envCubeTex;
-	setTexParameter(envCubeTex, GL_TEXTURE_CUBE_MAP, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
+	//从 envCube mipmap 上采样预计算镜面光颜色
+	setTexParameter(envCubeTex, GL_TEXTURE_CUBE_MAP, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR);
 	for(int i = 0; i < 6; ++i) {
 		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, ecFBOWidth, ecFBOHeight, 0, GL_RGB, GL_FLOAT, NULL);
 	}
@@ -130,19 +130,19 @@ int main()
 	
 	/*************** 这是手动创建 mipmap 的方式 ***************/ 
 	//uint mipMapLevels = std::log2(sColorCubeFBOWidth) + 1;
-	//uint mipMapLevels = 5;
-	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, mipMapLevels - 1); // 指定最大层级
+	uint mipMapLevels = 5;
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, mipMapLevels - 1); // 指定最大层级
 
-	// for(uint face = 0; face < 6; ++face) {
-	// 	for(uint level = 0; level < mipMapLevels; ++level) {
-	// 		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, level, GL_RGB16F,
-	// 				sColorCubeFBOWidth >> level, sColorCubeFBOHeight >> level, 0, GL_RGB, GL_FLOAT, NULL);
-	// 	}
-	// }
 	for(uint face = 0; face < 6; ++face) {
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, GL_RGB16F, sColorCubeFBOWidth, sColorCubeFBOHeight, 0, GL_RGB, GL_FLOAT, NULL);
+		for(uint level = 0; level < mipMapLevels; ++level) {
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, level, GL_RGB16F,
+					sColorCubeFBOWidth >> level, sColorCubeFBOHeight >> level, 0, GL_RGB, GL_FLOAT, NULL);
+		}
 	}
-	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+	// for(uint face = 0; face < 6; ++face) {
+	// 	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, GL_RGB16F, sColorCubeFBOWidth, sColorCubeFBOHeight, 0, GL_RGB, GL_FLOAT, NULL);
+	// }
+	// glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 	//待使用时, 颜色缓冲再绑定帧缓冲
 
 	// // for specular LUT(preBRDF)
@@ -201,6 +201,7 @@ int main()
 	//other
 	bool createPix = true;
 	// 主循环
+	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS); // 在立方体面之间进行线性插值
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 	glfwSwapInterval(1); // 前后缓冲区交换间隔
@@ -221,7 +222,7 @@ int main()
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.GetFov()), (float)wndWidth / wndHeight, 0.1f, 100.f);
 
-		// create cube map textue
+		// create cube map texture
 		glBindFramebuffer(GL_FRAMEBUFFER, envCubeFBO);
 		glViewport(0, 0, ecFBOWidth, ecFBOHeight);
 
@@ -242,6 +243,8 @@ int main()
 			glClear(GL_COLOR_BUFFER_BIT);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
+		glBindTexture(GL_TEXTURE_CUBE_MAP, envCubeTex);
+		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
 		// convolution irradiance
 		glBindFramebuffer(GL_FRAMEBUFFER, IBLCubeFBO);
@@ -271,13 +274,14 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, IBLCubeFBO);
 		shaderPrgmSpecColorMap.Use();
 		shaderPrgmSpecColorMap.SetUniformv("uProjection", ecProjection);
+		shaderPrgmSpecColorMap.SetUniform("uResolution", ecFBOWidth);
 	
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, envCubeTex);
 		shaderPrgmSpecColorMap.SetUniform("uTextureCube", 0);
 		
 		glBindVertexArray(cubeVAO);
-		uint mipMapLevels = 5;
+		//uint mipMapLevels = 5;
 		for(uint face = 0; face < 6; ++face) {
 			shaderPrgmSpecColorMap.SetUniformv("uView", ecViews[face]);
 			for(uint level = 0; level < mipMapLevels; ++level) {
@@ -347,9 +351,9 @@ int main()
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区
 		glfwPollEvents(); // 轮询 - glfw 与 窗口通信
 	}
-	for (int i = 0; i < 5; ++i) {
-		saveCubemapToPNG(sCubeTex, i);
-	}
+	// for (int i = 0; i < 5; ++i) {
+	// 	saveCubemapToPNG(sCubeTex, i, "./renderResult/sColorCubeMipMap/mipLevel_");
+	// }
 	// 清理资源
 	glfwDestroyWindow(pWindow); // 销毁窗口
 	glfwTerminate();			// 终止GLFW
