@@ -36,5 +36,7 @@
 build/ 
 .vscode/
 /window
+renderResult/
 /triangle_bak
 *log*.txt
+*.ini
