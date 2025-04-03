@@ -79,8 +79,8 @@ void main() {
 		vec2 xi = Hammersley(i, nrSamples); //ξ
 		vec3 H = ImportanceSampleGGX(xi, alpha, N);
 		vec3 L = 2 * dot(H, V) * H - V; // V + L = 2 * dot(H, V)
-		float NdotH = dot(N, H);
-		float OdotH = dot(O, H);
+		float NdotH = max(dot(N, H), 0.f);
+		float OdotH = max(dot(O, H), 0.f);
 		float mipLevel = GetMipLevel(alpha, NdotH, OdotH, nrSamples);
 		float NdotL = dot(N, L);
 		// 完全看不懂 Σ((L(l_i) *  N·l_i) / Σ(N·l_i)) 是在做什么, 完全不合理, 物理的数学的都不合理

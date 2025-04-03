@@ -55,6 +55,23 @@ int main()
 	};
 	SetVAOPosNorTex(cubeVAO);
 
+	// quad
+	GLuint quadVBO, quadVAO;
+	SetVertices(quadVBO,quadVertices);
+	auto SetVAOPosTex = [](GLuint& VAO){
+		glGenVertexArrays(1, &VAO);
+		glBindVertexArray(VAO);
+		
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0); // 顶点
+		glEnableVertexAttribArray(0);
+
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float))); // 纹理
+		glEnableVertexAttribArray(1);
+
+		glBindVertexArray(0); //重置默认绑定
+	};
+	SetVAOPosTex(quadVAO);
+
 	// 创建纹理对象
 	auto setTexParameter = [](GLuint& tex, GLenum target, GLint wrappingParam, GLint magFilterParam, GLint minFilterParam){
 		glGenTextures(1, &tex);
@@ -109,7 +126,6 @@ int main()
 	// 这里 diffuse 和 specular 共用 FBO
 	uint IBLCubeFBO;
 	glGenFramebuffers(1, &IBLCubeFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER,  IBLCubeFBO);
 
 	//for diffuse irradiance 
 	int dCubeFBOWidth = 32, dCubeFBOHeight = dCubeFBOWidth;
@@ -129,8 +145,7 @@ int main()
 	
 	
 	/*************** 这是手动创建 mipmap 的方式 ***************/ 
-	//uint mipMapLevels = std::log2(sColorCubeFBOWidth) + 1;
-	uint mipMapLevels = 5;
+	uint mipMapLevels = 7;
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, mipMapLevels - 1); // 指定最大层级
 
 	for(uint face = 0; face < 6; ++face) {
@@ -139,21 +154,14 @@ int main()
 					sColorCubeFBOWidth >> level, sColorCubeFBOHeight >> level, 0, GL_RGB, GL_FLOAT, NULL);
 		}
 	}
-	// for(uint face = 0; face < 6; ++face) {
-	// 	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, GL_RGB16F, sColorCubeFBOWidth, sColorCubeFBOHeight, 0, GL_RGB, GL_FLOAT, NULL);
-	// }
-	// glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-	//待使用时, 颜色缓冲再绑定帧缓冲
 
-	// // for specular LUT(preBRDF)
-	// int sLUCubeFBOWidth = 512, sLUCubeFBOHeight = sLUCubeFBOWidth;
+	// for specular LUT(preBRDF)
+	int sLUCubeFBOWidth = 512, sLUCubeFBOHeight = sLUCubeFBOWidth;
 	
-	// uint sLUCubeTex;
-	// setTexParameter(sCubeTex, GL_TEXTURE_CUBE_MAP, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
-	// for(int i = 0; i < 6; ++i) {
-	// 	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, sLUCubeFBOWidth, sLUCubeFBOHeight, 0, GL_RGB, GL_FLOAT, NULL);
-	// }
-	// //待使用时, 颜色缓冲再绑定帧缓冲
+	uint sLUCubeTex; //2D 纹理, 2个通道
+	setTexParameter(sLUCubeTex, GL_TEXTURE_2D, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, sLUCubeFBOWidth, sLUCubeFBOHeight, 0, GL_RG, GL_FLOAT, NULL);
+	//待使用时, 颜色缓冲再绑定帧缓冲
 
 	// 为cube 构造投影矩阵, 同时为每个面构造视图矩阵, 摄像机一直在中心, 旋转切换方向
 	glm::mat4 ecProjection = glm::perspective(glm::radians(90.f), (float)ecFBOWidth / ecFBOHeight, 0.1f, 10.f); // fov-90 确保能看到所有内容
@@ -171,7 +179,7 @@ int main()
 	wxy::ShaderProgram shaderPrgmEqRectToCube("./shader/cube.vs", "./shader/eqRectToCube.fs");
 	wxy::ShaderProgram shaderPrgmDiffEMap("./shader/cube.vs", "./shader/diffEMap.fs");
 	wxy::ShaderProgram shaderPrgmSpecColorMap("./shader/cube.vs", "./shader/specColorMap.fs");
-	//wxy::ShaderProgram shaderPrgmSpecBRDFMap("./shader/cube.vs", "./shader/specBRDFMap.fs");
+	wxy::ShaderProgram shaderPrgmSpecBRDFMap("./shader/quad.vs", "./shader/specBRDFMap.fs");
 	wxy::ShaderProgram shaderPrgmSkyCubeMap("./shader/skyCube.vs", "./shader/skyCube.fs");
 
 	//lights
@@ -198,8 +206,6 @@ int main()
 	ImGui_ImplGlfw_InitForOpenGL(pWindow, true);
 	ImGui_ImplOpenGL3_Init("#version 330");
 
-	//other
-	bool createPix = true;
 	// 主循环
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS); // 在立方体面之间进行线性插值
 	glEnable(GL_DEPTH_TEST);
@@ -270,8 +276,6 @@ int main()
 		}
 
 		// convolution env specular color
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glBindFramebuffer(GL_FRAMEBUFFER, IBLCubeFBO);
 		shaderPrgmSpecColorMap.Use();
 		shaderPrgmSpecColorMap.SetUniformv("uProjection", ecProjection);
 		shaderPrgmSpecColorMap.SetUniform("uResolution", ecFBOWidth);
@@ -297,6 +301,19 @@ int main()
 				glDrawArrays(GL_TRIANGLES, 0, 36);
 			}
 		}
+
+		// convolution env specular BRDF
+		glViewport(0, 0, sLUCubeFBOWidth, sLUCubeFBOHeight);
+		shaderPrgmSpecBRDFMap.Use();
+		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, sLUCubeTex, 0);
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+			std::cout << "IBLCubeFBO for specular BRDF is not complete!" << std::endl;
+		}
+		glClear(GL_COLOR_BUFFER_BIT);
+		
+		glBindVertexArray(quadVAO);
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
 		// draw background
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, wndWidth, wndHeight);
@@ -310,28 +327,37 @@ int main()
 		shaderPrgmSkyCubeMap.SetUniform("uMMapSampLevel", mMapSampLevel);
 
 		glActiveTexture(GL_TEXTURE0);
-		//glBindTexture(GL_TEXTURE_CUBE_MAP, envCubeTex);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, sCubeTex);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, envCubeTex);
+		//glBindTexture(GL_TEXTURE_CUBE_MAP, sCubeTex);
 		shaderPrgmSkyCubeMap.SetUniform("uTextureCube", 0);
 		
 		glBindVertexArray(cubeVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
-
+		
 		// draw sphere
 		shaderPrgmPBR.Use();
 		shaderPrgmPBR.SetUniformv("uView", view);
 		shaderPrgmPBR.SetUniformv("uProjection", projection);
-		shaderPrgmPBR.SetUniformv("uF0", glm::vec3(0.04)); //基础反射率
 		shaderPrgmPBR.SetUniformv("uCameraPosition", camera.GetPos());
 		shaderPrgmPBR.SetUniformv("uLightColors", 4, lightColors.data());
 		shaderPrgmPBR.SetUniformv("uLightPositions", 4, lightPositions.data());
 
 		shaderPrgmPBR.SetUniform("uAO", 0.9f);
+		shaderPrgmPBR.SetUniformv("uF0", glm::vec3(0.04)); //基础反射率
 		shaderPrgmPBR.SetUniformv("uAlbedo", glm::vec3(0.5f, 0.0f, 0.0f));
+		shaderPrgmPBR.SetUniform("uMaxMipLevel", (int)mipMapLevels - 1);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, dCubeTex);
-		shaderPrgmPBR.SetUniform("uTextureCube", 0);
+		shaderPrgmPBR.SetUniform("uTextureDiffE", 0);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, sCubeTex);
+		shaderPrgmPBR.SetUniform("uTextureSpecColor", 1);
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, sLUCubeTex);
+		shaderPrgmPBR.SetUniform("uTextureSpecBRDF", 2);
 
 		// draw sphere
 		for(int iRow = 0; iRow < nrRows; ++iRow) {
@@ -345,6 +371,15 @@ int main()
 				sphere.Draw();
 			}
 		}
+
+		// // debug
+		// glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		// glViewport(0, 0, wndWidth, wndHeight);
+		// glDisable(GL_DEPTH_TEST);
+		// glBindTexture(GL_TEXTURE_2D, sLUCubeTex);
+		// glBindVertexArray(quadVAO);
+		// glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
 		ImGui::End();
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -352,8 +387,9 @@ int main()
 		glfwPollEvents(); // 轮询 - glfw 与 窗口通信
 	}
 	// for (int i = 0; i < 5; ++i) {
-	// 	saveCubemapToPNG(sCubeTex, i, "./renderResult/sColorCubeMipMap/mipLevel_");
+	// 	SaveTexToPNG(sCubeTex, i, "./renderResult/sColorCubeMipMap/mipLevel_");
 	// }
+	SaveTexToPNG(sLUCubeTex, "./renderResult/BRDF/");
 	// 清理资源
 	glfwDestroyWindow(pWindow); // 销毁窗口
 	glfwTerminate();			// 终止GLFW

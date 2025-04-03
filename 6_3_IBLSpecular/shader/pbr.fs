@@ -13,7 +13,10 @@ uniform vec3 uF0; // 基础反射率
 uniform float uMetalness; // 金属度
 uniform vec3 uAlbedo; // 反照率
 uniform float uAO; // 环境光遮蔽系数
-uniform samplerCube uTextureCube;
+uniform samplerCube uTextureDiffE;
+uniform samplerCube uTextureSpecColor;
+uniform sampler2D uTextureSpecBRDF;
+uniform int uMaxMipLevel;
 
 uniform vec3 uCameraPosition;
 uniform vec3 uLightPositions[4];
@@ -22,7 +25,8 @@ uniform vec3 uLightColors[4];
 float pi = 3.14159265359;
 
 float NDF_GGXTR(float NdotH) {
-	float a = uRoughness * uRoughness;
+	//float a = uRoughness * uRoughness;
+	float a = uRoughness; // 无明显差异
 	float numer = a * a; // 分子
 
 	// 分母
@@ -40,7 +44,9 @@ float G_SchlickGGX(float Ndot, float k) {
 }
 
 float G_Smith(float NdotV, float NdotL) {
-	float k = (uRoughness + 1.f) * (uRoughness + 1.f) * 0.125;
+	//float alpha = uRoughness * uRoughness;
+	float alpha = uRoughness;// 无明显差异
+	float k = (alpha + 1.f) * (alpha + 1.f) * 0.125;
 	return  G_SchlickGGX(NdotV, k) * G_SchlickGGX(NdotL, k);
 }
 
@@ -70,7 +76,7 @@ vec3 BRDF(vec3 normal, vec3 posToCamera, vec3 posToLight) {
 
 	vec3 ks = F;
 	vec3 kd = 1.f - ks;
-	kd *= 1.0 - uMetalness;
+	kd *= (1.0 - uMetalness);
 	vec3 fLambert = uAlbedo / pi; // 根据金属度调整漫反射率
 	return kd * fLambert + ks * fCookTorrance;
 }
@@ -93,16 +99,33 @@ void main() {
 
 	vec3 ks = Fresnel_Schlick_Roughness(max(dot(normal, posToCamera), 0.f)); // 由于没有确定的半程向量, 所以这里使用法线和视线夹角
 	vec3 kd = 1.f - ks;
+	kd *= 1.0 - uMetalness;
 
+	//specularColor
+	float NdotV = max(dot(normal, posToCamera), 0);
+	vec3 F0 = mix(uF0, uAlbedo, uMetalness); // 基础反射率, 基于金属度插值
+	vec2 lut = texture(uTextureSpecBRDF, vec2(NdotV, uRoughness)).xy;
+
+	// 示例代码中这里使用的F, 即ks, 但是根据 BRDF 预计算公式推导, 这里应使用F0
+	// 实际测试并不能看出有明显的差异
+	vec3 brdf = F0 * lut.x + lut.y;
+	vec3 L = 2 * dot(normal, posToCamera) * normal - posToCamera;
+	float mipLevel = uRoughness * uMaxMipLevel;
+	vec3 specularColor = brdf * textureLod(uTextureSpecColor, L, mipLevel).rgb;
+	//vec3 specularColor = brdf * vec3(1.0);//debug
+	
+	// diffuseColor 
 	// 因为 IBL 中假设所有 irradiance 均匀分布在场景中心
 	// 也就是无论物体在什么位值, 计算其 radiance 时假设所有物体都在场景中心, 其接受到的 irradiance 与位值无关
 	// 所以这里还是取用片断的法线, 然后将其放在立方体中心, 采样法线方向的 irradiance
-	vec3 ambientColor = kd * texture(uTextureCube, normal).rgb * uAlbedo * uAO; 
-
-	vec3 resultColor = pLo + ambientColor;
+	vec3 diffuseColor = kd * texture(uTextureDiffE, normal).rgb * uAlbedo; 
+	
+	vec3 ambientColor = (diffuseColor + specularColor) * uAO;
+	
+	vec3 resultColor = 0 + ambientColor;
 	//resultColor = pLo;
 	resultColor = resultColor / (resultColor + vec3(1.0)); // 色调映射
 	resultColor = pow(resultColor, vec3(1 / 2.2f)); // Gamma 校正
 	fColor = vec4(resultColor, 1.f);
-	//fColor = vec4(vec3(uRoughness), 1.f);
+	//fColor = vec4(vec3(float(uMaxMipLevel) / 4.f), 1.f);
 }

@@ -66,6 +66,14 @@ std::vector<float> cubeVertices{
 		-1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
 		-1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f  // bottom-left        
 };
+
+std::vector<float> quadVertices = {
+	// positions        // texture Coords
+	-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+	-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+	 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+	 1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+};
 // window
 int wndWidth = 0, wndHeight = 0;
 
@@ -177,15 +185,8 @@ void GetError() {
 	}
 }
 
-// 立方体贴图的 6 个面对应的文件名
-const char* filenames[6] = {
-    "cubemap_posx.png", "cubemap_negx.png",
-    "cubemap_posy.png", "cubemap_negy.png",
-    "cubemap_posz.png", "cubemap_negz.png"
-};
-
 // 读取 Cube Map 纹理并保存为 PNG
-void saveCubemapToPNG(GLuint textureID, int mipLevel, std::string path) {
+void SaveTexToPNG(GLuint textureID, int mipLevel, std::string path) {
     glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
 
     // 获取纹理大小
@@ -211,5 +212,40 @@ void saveCubemapToPNG(GLuint textureID, int mipLevel, std::string path) {
     }
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0); // 解绑纹理
+}
+
+// 读取 TEXTURE_2D 纹理并保存为 PNG
+// 
+void SaveTexToPNG(GLuint textureID, std::string path) {
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    int width, height;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+
+    // 使用浮点数组读取数据
+    std::vector<float> data(width * height * 2); // 2通道
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RG, GL_FLOAT, data.data());
+
+    // 转换为字节数据（0-255）
+    std::vector<unsigned char> byteData(width * height * 2);
+    for (int i = 0; i < width * height * 2; ++i) {
+        // 假设浮点值范围在[0,1]，映射到[0,255]
+        byteData[i] = static_cast<unsigned char>(data[i] * 255.0f);
+    }
+
+	std::vector<unsigned char> rgbData(width * height * 3);
+	for (int i = 0; i < width * height; ++i) {
+	    rgbData[i * 3 + 0] = byteData[i * 2 + 0]; // R
+	    rgbData[i * 3 + 1] = byteData[i * 2 + 1]; // G
+	    rgbData[i * 3 + 2] = 0;                   // B 通道填充 0
+	}
+    // 保存为2通道PNG
+    if (!stbi_write_png((path + "BRDF_1.png").c_str(), 
+        width, height, 3, rgbData.data(), width * 3)) {
+        std::cerr << "Error::stbi_write_png!" << std::endl;
+    }
+
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 #endif
