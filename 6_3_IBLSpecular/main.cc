@@ -91,6 +91,19 @@ int main()
 		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, magFilterParam); // 放大
 		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, minFilterParam); // 缩小
 	};
+		
+	//sphere 纹理
+	std::vector<std::string> texNames{"grass", "gold", "wall", "plastic", "rusted_iron"};
+	wxy::Material mGrass, mGold, mWall, mPlastic, mRustedIron;
+	std::vector<wxy::Material> materials{mGrass, mGold, mWall, mPlastic, mRustedIron};
+	uint i = 0;
+	for(const auto& texName : texNames) {
+		materials[i].PushBackTexture(wxy::Albedo, "../resources/textures/pbr/" + texName + "/albedo.png", true);
+		materials[i].PushBackTexture(wxy::Normal, "../resources/textures/pbr/" + texName + "/normal.png", false);
+		materials[i].PushBackTexture(wxy::Metallicity, "../resources/textures/pbr/" + texName + "/metallic.png", false);
+		materials[i].PushBackTexture(wxy::Roughness, "../resources/textures/pbr/" + texName + "/roughness.png", false);
+		materials[i++].PushBackTexture(wxy::AO, "../resources/textures/pbr/" + texName + "/ao.png", true);
+	}
 
 	// env 纹理
 	uint envHDRTex;
@@ -110,7 +123,7 @@ int main()
 
 	// envCubeFBO, 将环境贴图从等距柱状投影图采样到 cube map 中
 	uint envCubeFBO;
-	int ecFBOWidth = 1024, ecFBOHeight = ecFBOWidth;
+	int ecFBOWidth = 512, ecFBOHeight = ecFBOWidth;
 	glGenFramebuffers(1, &envCubeFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, envCubeFBO);
 	
@@ -190,13 +203,11 @@ int main()
 		{ 10.0f, -10.0f, 10.0f}
 	};
 	std::vector <glm::vec3> lightColors {
-		{150.0f, 150.0f, 150.0f},
-		{150.0f, 150.0f, 150.0f},
-		{150.0f, 150.0f, 150.0f},
-		{150.0f, 150.0f, 150.0f}
+		{300.0f, 300.0f, 300.0f},
+		{300.0f, 300.0f, 300.0f},
+		{300.0f, 300.0f, 300.0f},
+		{300.0f, 300.0f, 300.0f}
 	};
-	int nrRows = 7;
-	int nrColumns = 7;
 	float spacing = 2.5;
 	
 	//ImGui
@@ -285,7 +296,7 @@ int main()
 		shaderPrgmSpecColorMap.SetUniform("uTextureCube", 0);
 		
 		glBindVertexArray(cubeVAO);
-		//uint mipMapLevels = 5;
+
 		for(uint face = 0; face < 6; ++face) {
 			shaderPrgmSpecColorMap.SetUniformv("uView", ecViews[face]);
 			for(uint level = 0; level < mipMapLevels; ++level) {
@@ -342,9 +353,7 @@ int main()
 		shaderPrgmPBR.SetUniformv("uLightColors", 4, lightColors.data());
 		shaderPrgmPBR.SetUniformv("uLightPositions", 4, lightPositions.data());
 
-		shaderPrgmPBR.SetUniform("uAO", 0.9f);
 		shaderPrgmPBR.SetUniformv("uF0", glm::vec3(0.04)); //基础反射率
-		shaderPrgmPBR.SetUniformv("uAlbedo", glm::vec3(0.5f, 0.0f, 0.0f));
 		shaderPrgmPBR.SetUniform("uMaxMipLevel", (int)mipMapLevels - 1);
 
 		glActiveTexture(GL_TEXTURE0);
@@ -359,17 +368,12 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, sLUCubeTex);
 		shaderPrgmPBR.SetUniform("uTextureSpecBRDF", 2);
 
-		// draw sphere
-		for(int iRow = 0; iRow < nrRows; ++iRow) {
-			shaderPrgmPBR.SetUniform("uMetalness", (float)iRow / nrRows);
-			for(int iCol = 0; iCol < nrColumns; ++iCol) {
-				//glm::mat4 model = glm::translate(glm::mat4(1.f), glm::vec3(iRow, iCol, 0) * spacing);
-				glm::mat4 model = glm::translate(glm::mat4(1.f), 
-							glm::vec3( iCol - nrColumns / 2.f, iRow - nrRows / 2.f, -2 / spacing) * spacing); // 示例代码布局, 由中心向四周扩散
-				shaderPrgmPBR.SetUniform("uRoughness", glm::clamp((float)iCol / nrColumns, 0.05f, 1.f));
-				shaderPrgmPBR.SetUniformv("uModel", model);
+		glm::mat4 sphereModel = glm::translate(glm::mat4(1.f), glm::vec3(-2.f * spacing, 0.f, 0.f));
+		for(auto& material : materials) {
+			sphereModel = glm::translate(sphereModel, glm::vec3(spacing, 0.f, 0.f));
+				shaderPrgmPBR.SetUniformv("uModel", sphereModel);
+				material.Bind(shaderPrgmPBR, 2);
 				sphere.Draw();
-			}
 		}
 
 		// // debug

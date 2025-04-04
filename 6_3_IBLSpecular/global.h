@@ -15,11 +15,14 @@
 #include <vector>
 #include <random>
 #include <functional>
+#include <tuple>
+#include <utility>
 #include <cmath>
 #include "../MyClass/shaderProgram.hpp"
 #include "../MyClass/camera.hpp"
 #include "../MyClass/model.hpp"
 #include "../MyClass/sphere.hpp"
+#include "../MyClass/material.hpp"
 
 using uint = unsigned int;
 std::vector<float> cubeVertices{
@@ -77,7 +80,7 @@ std::vector<float> quadVertices = {
 // window
 int wndWidth = 0, wndHeight = 0;
 
-wxy::Camera camera({-4.f, 4.f, 10.f});//camera, pos
+wxy::Camera camera({0, 0.f, 10.f});//camera, pos
 
 // time
 float curTime = 0.f, lastTime = 0.f, perFrameTime = 0.f;
