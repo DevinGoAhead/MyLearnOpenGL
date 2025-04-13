@@ -6,9 +6,12 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
-// #include "imgui.h"
-// #include "backends/imgui_impl_glfw.h"
-// #include "backends/imgui_impl_opengl3.h"
+
+#define STB_TEXTEDIT_IMPLEMENTATION
+#define STB_TEXT_HAS_SELECTION(s) ((s)->select_start != (s)->select_end)
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
 
 #ifndef STB_IMAGE_WRITE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -104,24 +107,26 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 
 bool first = true;
 void cursor_callback(GLFWwindow* window, double xPos, double yPos) {
-	// if (ImGui::GetIO().WantCaptureMouse) {
-    //     return; // ImGui正在操作，阻断相机响应
-    // }
-	// 计算偏移值
-	// 当光标向上移动时会得到一个 < 0 的 dy, 如果 _pitch += dy 会导致 _pitch 减小, 这正好与我们的目标相反, 故 dy 取反
-	float dx = xPos - xLast, dy = yLast - yPos;
-	if(first) {dx = 0, dy =0, first = false;}
-	camera.ProcessMouseMove(dx, dy);
-	xLast = xPos, yLast = yPos;
+	//if (ImGui::GetIO().WantCaptureMouse) {return;}// ImGui正在操作，阻断相机响应
+
+	if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
+		// 计算偏移值
+		// 当光标向上移动时会得到一个 < 0 的 dy, 如果 _pitch += dy 会导致 _pitch 减小, 这正好与我们的目标相反, 故 dy 取反
+		float dx = xPos - xLast, dy = yLast - yPos;
+		if(first) {dx = 0, dy =0, first = false;}
+		camera.ProcessMouseMove(dx, dy);
+		xLast = xPos, yLast = yPos;
+	}
 }
 
 // 多数鼠标无法在 x 方向滚动, 故暂忽略 xoffset
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-	// if (ImGui::GetIO().WantCaptureMouse) {
-    //     return; // ImGui正在操作，阻断相机响应
-    // }
-	// 通常滚轮向下是一个放大的操作, 而滚轮向下会导致一个 > 0 的 yoffset, 这与我们预期一致
-	camera.ProcessMouseScroll(xoffset,  yoffset);
+	// if (ImGui::GetIO().WantCaptureMouse) {return;}// ImGui正在操作，阻断相机响应
+	// if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {return;}
+	if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
+		// 通常滚轮向下是一个放大的操作, 而滚轮向下会导致一个 > 0 的 yoffset, 这与我们预期一致
+		camera.ProcessMouseScroll(xoffset,  yoffset);
+	}
 }
 
 void viewport_size_callback(GLFWwindow* window, int width, int height) {

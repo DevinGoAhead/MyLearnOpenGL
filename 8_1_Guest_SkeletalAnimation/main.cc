@@ -29,28 +29,49 @@ int main()
 	glfwSetCursorPosCallback(pWindow, cursor_callback);// 注册光标捕捉函数
 	glfwSetScrollCallback(pWindow, scroll_callback);// 注册滚轮捕捉函数
 
-	//std::string pathName = "../resources/objects/vampire/dancing_vampire.dae"; 
-	//std::string pathName = "../resources/objects/Catwalk_Walk_Stop_Twist.dae"; 
-	std::string pathName = "../resources/objects/warrok/Flying_Knee_Punch_Combo.dae";
-
 	wxy::ShaderProgram animationShaderPrgm("./shader/animation.vert", "./shader/animation.frag");
-	wxy::Model actor(std::filesystem::absolute(pathName).string());
-	wxy::AnimationsManager animationManager;
-	animationManager.LoadAnimations(pathName, actor);
-	//animationManager.LoadAnimations("../resources/objects/Great_Sword_Slash.dae", actor);
-	animationManager.PrintAnimationsName();
-	wxy::Skeleton skeleton(pathName);
-	wxy::Animator animator(skeleton);
-	//auto animation = animationManager.GetAnimation("Hips");
-	animator.Play(animationManager.GetAnimation("mixamorig_Hips"));
-	
-	// std::cout << '\n';
-	// animation->PrintBonesInBones();
-	// std::cout << '\n';
-	// animation->PrintBonesInInfoMap();
-	// std::cout << '\n';
-	// skeleton.PrintBonesInHierarchy();
 
+	std::string modelPathName = "../resources/objects/warrok/Flying_Knee_Punch_Combo.dae";
+
+	std::vector<std::string> animationPathNames;
+	std::string animationPrimaryPath = "../resources/objects/warrok/";
+	animationPathNames.emplace_back(animationPrimaryPath + "Flying_Knee_Punch_Combo.dae");
+	animationPathNames.emplace_back(animationPrimaryPath + "Swinging.dae");
+	animationPathNames.emplace_back(animationPrimaryPath + "Strut_Walking.dae");
+	animationPathNames.emplace_back(animationPrimaryPath + "Fall_Flat.dae");
+	animationPathNames.emplace_back(animationPrimaryPath + "Flair.dae");
+	animationPathNames.emplace_back(animationPrimaryPath + "Running_Arc.dae");
+
+	wxy::Model actor(std::filesystem::absolute(modelPathName).string());
+	
+	std::vector<std::string> animationNames;
+	std::vector<const char*> animationNamesCStr;
+	uint sizeAnimaPathNames = animationPathNames.size();
+	animationNames.reserve(sizeAnimaPathNames);
+	animationNamesCStr.reserve(sizeAnimaPathNames);
+	wxy::AnimationsManager animationManager;
+
+	for(const auto& animationPathName : animationPathNames) {
+			auto animationName = std::filesystem::path(animationPathName).stem().string();
+			animationNames.push_back(animationName);
+			animationNamesCStr.push_back(animationNames.back().c_str());
+			animationManager.LoadAnimations(animationPathName, animationName, actor);
+	}
+	animationManager.PrintAnimationsName();
+
+	wxy::Skeleton skeleton(modelPathName);
+	wxy::Animator animator(skeleton);
+
+	//ImGui
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext(NULL);
+	ImGui::StyleColorsDark();
+	ImGui_ImplGlfw_InitForOpenGL(pWindow, true);
+	ImGui_ImplOpenGL3_Init("#version 330");
+	ImGuiIO& io = ImGui::GetIO();
+	io.FontGlobalScale += 0.8f;
+
+	bool isFirstFrame = true; // 标记首次运行
 	// 主循环
 	glEnable(GL_DEPTH_TEST);
 	glfwSwapInterval(1); // 前后缓冲区交换间隔
@@ -63,20 +84,57 @@ int main()
 		glClearColor(0.1, 0.1,0.1, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+		//ImGui::ShowDemoWindow();
+
+		ImVec2 sizeControPannel(600, 300);
+		//ImVec2 posControPannel((wndWidth - sizeControPannel.x)  * 0.5f, 2.f); // 居中, 距离顶部20 像素
+
+		ImGui::SetNextWindowSize(sizeControPannel);
+		//ImGui::SetNextWindowPos(posControPannel);
+		
+		ImGui::Begin("Control Pannel");
+
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.GetFov()), (float)wndWidth / wndHeight, 0.1f, 100.f);
 
 		animationShaderPrgm.Use();
 		animationShaderPrgm.SetUniformv("uView", view);
 		animationShaderPrgm.SetUniformv("uProjection", projection);
+		// 下面
+		if (isFirstFrame) {
+		    // 程序启动时自动播放第一个动画
+		    if (!animationNames.empty()) {
+		        animator.Play(animationManager.GetAnimation(animationNames[0]));
+		    }
+		    isFirstFrame = false;
+		}
+		// 必须要渲染出第 1 帧,才会触发 ImGui::Combo 并返回true
+		// 但是又必须要先进入if, 调用 Play 才能渲染出第一帧, 由此设置了上面的 if (isFirstFrame) 
+		static int curAnimationIndex = 0;
+		if(ImGui::Combo("Select Animation", &curAnimationIndex, animationNamesCStr.data(), animationNames.size())) {
+			animator.Play(animationManager.GetAnimation(animationNames[curAnimationIndex]));
+		}
 
-		animator.UpdateAnimation(perFrameTime);
+		static wxy::PlayMode curPlayMode = wxy::Once;
+		ImGui::BeginGroup();
+		ImGui::RadioButton("Loop", (int*)&curPlayMode, wxy::Loop); ImGui::SameLine();
+		ImGui::RadioButton("Once", (int*)&curPlayMode, wxy::Once);ImGui::SameLine();
+		ImGui::EndGroup();
+		animator.UpdateAnimation(perFrameTime, curPlayMode);
+		
 		auto finalTransforms = animator.GetFinalTransforms();
 		animationShaderPrgm.SetUniformv("uFinalTransforms", wxy::MaxBones, animator.GetFinalTransforms().data());
 		
 		glm::mat4 model = glm::scale(glm::mat4(1.f), glm::vec3(0.5f));
 		animationShaderPrgm.SetUniformv("uModel", model);
 		actor.Draw(animationShaderPrgm);
+
+		ImGui::End();
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		glfwSwapBuffers(pWindow); // 交换前后缓冲区
 		glfwPollEvents(); // 轮询 - glfw 与 窗口通信

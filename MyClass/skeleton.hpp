@@ -22,15 +22,14 @@ namespace wxy {
 			_PrintBonesInHierarchy(_rootNode);
 			std::cout << std::endl;
 		}
+	private:
+		void ReadHierarchyData(Node& dest, const aiNode *src);
 		void _PrintBonesInHierarchy(const Node& node) {
 			for(const auto& _node : node._children) {
 				_PrintBonesInHierarchy(_node);
 			}
 			std::cout << node._boneName << ", ";
 		}
-	private:
-		void ReadHierarchyData(Node& dest, const aiNode *src);
-
 	private:
 		Node _rootNode;
 	};

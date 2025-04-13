@@ -6,13 +6,17 @@
 #include <memory>
 
 namespace wxy {
+	
+	enum PlayMode {
+		Loop, Once
+	};
 	const int MaxBones = 100;
 	class Animator {
 	using Node = HierarchyNode;
 	public:
 		Animator(const Skeleton& skeleton);
 		void Play(std::shared_ptr<AnimationClip> newAnimation);
-		void UpdateAnimation(float dTime);
+		void UpdateAnimation(float dTime, PlayMode playMode = Once);
 		const std::vector<glm::mat4>& GetFinalTransforms()const;
 	private:
 		void CalculateTransform(Node& node, glm::mat4 parentTransform);
@@ -36,13 +40,22 @@ namespace wxy {
 		std::fill(_finalTransforms.begin(), _finalTransforms.end(), glm::mat4(1.f));
 		_currentTime = 0.f;
 	}
-	void Animator::UpdateAnimation(float dTime) {
+
+	// 默认播放一次停止
+	void Animator::UpdateAnimation(float dTime, PlayMode playMode) {
 		if(!_currentAnimation) {
 			std::cout << "Invalid animation !" << std::endl;
 			return;
 		};
 		_currentTime +=  _currentAnimation->GetTicksPerSecond() * dTime; // 换算为动画世界的时间
-		_currentTime = std::fmod(_currentTime, _currentAnimation->GetDuration()); // 浮点数求模, 确保 _currentTime <= duration
+		if(playMode == Loop) _currentTime = std::fmod(_currentTime, _currentAnimation->GetDuration()); // 浮点数求模, 确保 _currentTime <= duration
+		else if(_currentTime >= (_currentAnimation->GetDuration() + 0.0000001)) {
+			float tempTime = _currentTime;
+			_currentTime = 0.f;
+			CalculateTransform(_skeleton.GetRootNode(), glm::mat4(1.f));
+			_currentTime = tempTime;
+			return;
+		}
 		CalculateTransform(_skeleton.GetRootNode(), glm::mat4(1.f));
 	}
 
