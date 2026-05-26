@@ -30,7 +30,7 @@ void main() {
 	vec3 pos = texture(uGBuffer.texturePosition, vTexCoords).xyz; // 当前点, 也就是 kernel 的球心
 	float occusion = 0.f;
 	for(int i = 0; i < 64; ++i) {
-		vec3 samplePos = pos + uSamples[i] * uRadius; // 采样点在观察空间中的位置
+		vec3 samplePos = pos + (TBN * uSamples[i]) * uRadius; // 采样点在观察空间中的位置
 		
 		// 将 samplePos 投影到屏幕空间
 		vec4 samplePosScreen = uProjection * vec4(samplePos, 1.f); // 裁剪空间
