@@ -39,7 +39,9 @@ void main() {
 		samplePosScreen = (samplePosScreen + 1.f) / 2.f; // 转换到 [0, 1], 但实际可能比这个范围大
 
 		float zSample = samplePos.z; //随机采样点的 z 坐标
-		float zGbuffer = texture(uGBuffer.texturePosition, samplePosScreen.xy).z; //采样点对应的屏幕像素, 对应的gBUffer 中存储的实际的 positions 的 z 值
+		// uGBuffer.texturePosition是一个对齐到屏幕的纹理
+		// 采样点对应的屏幕像素(遮挡采样点的像素), 对应的gBUffer 中存储的实际的 positions 的 z 值
+		float zGbuffer = texture(uGBuffer.texturePosition, samplePosScreen.xy).z;
 
 		// 采样点投影到屏幕后正好对应到一个前方的物体的边缘上, 即使这个物体在核心点很远的范围, 也会误判遮挡
 		//   采样到背景区域也 *可能* 有这样的问题
